@@ -10,7 +10,7 @@
 
     <router-tab>
       <template #start>
-        <RouterTabsPinia storage-key="example-tabs" />
+        <router-tabs />
       </template>
     </router-tab>
   </div>
@@ -18,7 +18,6 @@
 
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import { RouterTabsPinia } from 'vue3-router-tab'
 </script>
 
 <style scoped>

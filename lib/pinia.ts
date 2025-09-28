@@ -1,5 +1,6 @@
 import { defineStore, type StoreDefinition } from 'pinia'
 import { onMounted, ref, watch } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
 import { useRouterTabs } from './useRouterTabs'
 import type { RouterTabsSnapshot } from './core/types'
 
@@ -10,6 +11,8 @@ export interface RouterTabsPiniaOptions {
   storageKey?: string
   /** Custom storage implementation (e.g. localStorage, sessionStorage). Defaults to window.localStorage. */
   storage?: Storage | null
+  /** Fallback route to open when no snapshot exists. Defaults to RouterTab's default route. */
+  fallbackRoute?: RouteLocationRaw
   /** Provide a custom store definition if you want to control persistence yourself. */
   store?: StoreDefinition<'routerTabs', { snapshot: RouterTabsSnapshot | null }, {}, { load(): void; setSnapshot(snapshot: RouterTabsSnapshot | null): void; clear(): void }>
 }
@@ -75,7 +78,10 @@ function createDefaultStore(options: RouterTabsPiniaOptions) {
  * ```
  */
 export function useRouterTabsPiniaPersistence(options: RouterTabsPiniaOptions = {}) {
-  const controller = useRouterTabs()
+  const controller = useRouterTabs({ optional: true })
+  if (!controller) {
+    throw new Error('[RouterTabs] Pinia helper must be used inside <router-tab>.')
+  }
   const Store = options.store ?? createDefaultStore(options)
   const store = Store()
   const hydrating = ref(false)
@@ -83,15 +89,24 @@ export function useRouterTabsPiniaPersistence(options: RouterTabsPiniaOptions = 
   onMounted(async () => {
     store.load()
     const snapshot = store.snapshot
-    if (snapshot) {
+    if (snapshot && snapshot.tabs?.length) {
       try {
         hydrating.value = true
         await controller.hydrate(snapshot)
       } finally {
         hydrating.value = false
-        store.setSnapshot(controller.snapshot())
+      }
+    } else {
+      try {
+        hydrating.value = true
+        const fallback = options.fallbackRoute ?? controller.options.defaultRoute
+        await controller.reset(fallback)
+      } finally {
+        hydrating.value = false
       }
     }
+
+    store.setSnapshot(controller.snapshot())
   })
 
   watch(

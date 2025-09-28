@@ -9,7 +9,7 @@ import type { RouterTabsContext } from './core/types'
 
 export type { TabRecord, TabInput, RouterTabsOptions, CloseTabOptions } from './core/types'
 
-export { routerTabsKey, useRouterTabs, useRouterTabsPiniaPersistence, RouterTabsPinia }
+export { routerTabsKey, useRouterTabs, useRouterTabsPiniaPersistence, RouterTabsPinia as RouterTabs, RouterTabsPinia }
 
 import "./scss/index.scss";
 
@@ -19,10 +19,18 @@ export interface RouterTabPlugin {
 
 const plugin: RouterTabPlugin = {
   install(app: App) {
-    if ((plugin as any)._installed) return;
-    (plugin as any)._installed = true
+    if ((plugin as any)._installed) return
+    ;(plugin as any)._installed = true
 
-    app.component(RouterTab.name, RouterTab)
+    const componentName = RouterTab.name || 'RouterTab'
+    const piniaComponentName = RouterTabsPinia.name || 'RouterTabs'
+    
+    app.component(componentName, RouterTab)
+    app.component(piniaComponentName, RouterTabsPinia)
+
+    if (piniaComponentName !== 'router-tabs') {
+      app.component('router-tabs', RouterTabsPinia)
+    }
 
     Object.defineProperty(app.config.globalProperties, '$tabs', {
       configurable: true,

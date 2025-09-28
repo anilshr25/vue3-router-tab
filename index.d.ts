@@ -34,6 +34,7 @@ export interface RouterTabsPiniaOptions {
   storeId?: string
   storageKey?: string
   storage?: Storage | null
+  fallbackRoute?: import('vue-router').RouteLocationRaw
 }
 
 export declare function useRouterTabsPiniaPersistence(options?: RouterTabsPiniaOptions & { store?: import('pinia').StoreDefinition<any, any, any, any> }): import('pinia').Store<any, any, any, any>
