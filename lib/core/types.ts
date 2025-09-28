@@ -1,0 +1,115 @@
+import type { ComputedRef, Ref } from 'vue'
+import type { RouteLocationRaw, RouteLocationNormalizedLoaded } from 'vue-router'
+
+export type TransitionLike =
+  | string
+  | {
+      name?: string
+      mode?: 'in-out' | 'out-in' | 'default'
+      appear?: boolean
+      [key: string]: unknown
+    }
+
+export interface TabMeta {
+  title?: string | [string, ...unknown[]]
+  tips?: string | [string, ...unknown[]]
+  icon?: string
+  closable?: boolean
+  tabClass?: string | string[] | Record<string, boolean>
+  target?: string
+  href?: string
+}
+
+export interface TabInput extends Partial<TabMeta> {
+  to: RouteLocationRaw
+  id?: string
+}
+
+export interface TabRecord extends TabMeta {
+  id: string
+  to: RouteLocationRaw
+  fullPath: string
+  matched: RouteLocationNormalizedLoaded
+  alive: boolean
+  reusable: boolean
+}
+
+export type RouterTabsMenuPreset =
+  | 'refresh'
+  | 'refreshAll'
+  | 'close'
+  | 'closeLefts'
+  | 'closeRights'
+  | 'closeOthers'
+
+export interface RouterTabsMenuContext {
+  target: TabRecord
+  controller: RouterTabsContext
+}
+
+export interface RouterTabsMenuItem {
+  id: RouterTabsMenuPreset | string
+  label?: string
+  handler?: (ctx: RouterTabsMenuContext) => void | Promise<void>
+  visible?: boolean | ((ctx: RouterTabsMenuContext) => boolean)
+  enable?: boolean | ((ctx: RouterTabsMenuContext) => boolean)
+}
+
+export type RouterTabsMenuConfig = RouterTabsMenuPreset | RouterTabsMenuItem
+
+export interface RouterTabsSnapshotTab {
+  to: RouteLocationRaw
+  title?: TabRecord['title']
+  tips?: TabRecord['tips']
+  icon?: TabRecord['icon']
+  tabClass?: TabRecord['tabClass']
+  closable?: boolean
+}
+
+export interface RouterTabsSnapshot {
+  tabs: RouterTabsSnapshotTab[]
+  active?: RouteLocationRaw | null
+}
+
+export interface CloseTabOptions {
+  redirect?: RouteLocationRaw | null
+  force?: boolean
+  refresh?: boolean | 'sameTab'
+}
+
+export interface RouterTabsOptions {
+  initialTabs?: TabInput[]
+  keepAlive?: boolean
+  maxAlive?: number
+  keepLastTab?: boolean
+  appendPosition?: 'last' | 'next'
+  defaultRoute?: RouteLocationRaw
+}
+
+export interface RouteMatchResult {
+  key: string
+  fullPath: string
+  alive: boolean
+  reusable: boolean
+  matched: RouteLocationNormalizedLoaded
+}
+
+export interface RouterTabsContext {
+  options: Required<RouterTabsOptions>
+  tabs: TabRecord[]
+  activeId: Ref<string | null>
+  current: Ref<TabRecord | undefined>
+  includeKeys: ComputedRef<string[]>
+  refreshingKey: Ref<string | null>
+  openTab: (target: RouteLocationRaw, replace?: boolean, refresh?: boolean | 'sameTab') => Promise<void>
+  closeTab: (id?: string, options?: CloseTabOptions) => Promise<void>
+  removeTab: (id: string, opts?: { redirect?: RouteLocationRaw | null; force?: boolean }) => Promise<void>
+  refreshTab: (id?: string, force?: boolean) => Promise<void>
+  refreshAll: (force?: boolean) => Promise<void>
+  reset: (route?: RouteLocationRaw) => Promise<void>
+  reload: () => Promise<void>
+  getRouteKey: (route: RouteLocationNormalizedLoaded | RouteLocationRaw) => string
+  matchRoute: (route: RouteLocationNormalizedLoaded | RouteLocationRaw) => RouteMatchResult
+  snapshot: () => RouterTabsSnapshot
+  hydrate: (snapshot: RouterTabsSnapshot) => Promise<void>
+}
