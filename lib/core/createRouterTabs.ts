@@ -4,6 +4,8 @@ import type {
   RouteMatchResult,
   RouterTabsContext,
   RouterTabsOptions,
+  RouterTabsSnapshot,
+  RouterTabsSnapshotTab,
   TabInput,
   TabRecord
 } from './types'
@@ -33,14 +35,26 @@ function resolveRoute(router: Router, location: RouteLocationRaw): RouteLocation
   return resolved
 }
 
+const builtinKeyResolvers: Record<string, (route: RouteLocationNormalizedLoaded) => string> = {
+  path: route => route.path,
+  fullpath: route => route.fullPath,
+  fullname: route => route.fullPath,
+  full: route => route.fullPath,
+  name: route => (route.name ? String(route.name) : route.fullPath)
+}
+
 function resolveKey(route: RouteLocationNormalizedLoaded): string {
-  const metaKey = route.meta?.key
+  const metaKey = route.meta?.key as RouterTabsMenuPreset | string | ((route: RouteLocationNormalizedLoaded) => string) | undefined
+
   if (typeof metaKey === 'function') {
     const key = metaKey(route)
     if (typeof key === 'string' && key.length) return key
   } else if (typeof metaKey === 'string' && metaKey.length) {
+    const resolver = builtinKeyResolvers[metaKey.toLowerCase()]
+    if (resolver) return resolver(route)
     return metaKey
   }
+
   return route.fullPath
 }
 
@@ -112,6 +126,27 @@ function enforceMaxAlive(tabs: TabRecord[], maxAlive: number, activeId: string |
   }
 }
 
+function toSnapshotTab(tab: TabRecord): RouterTabsSnapshotTab {
+  return {
+    to: tab.to,
+    title: tab.title,
+    tips: tab.tips,
+    icon: tab.icon,
+    tabClass: tab.tabClass,
+    closable: tab.closable
+  }
+}
+
+function fromSnapshotTab(snapshot: RouterTabsSnapshotTab): Partial<TabRecord> {
+  const base: Partial<TabRecord> = {}
+  if ('title' in snapshot) base.title = snapshot.title
+  if ('tips' in snapshot) base.tips = snapshot.tips
+  if ('icon' in snapshot) base.icon = snapshot.icon
+  if ('tabClass' in snapshot) base.tabClass = snapshot.tabClass
+  if ('closable' in snapshot) base.closable = snapshot.closable
+  return base
+}
+
 export function createRouterTabs(
   router: Router,
   optionsInput: RouterTabsOptions = {}
@@ -123,6 +158,8 @@ export function createRouterTabs(
   const current = shallowRef<TabRecord>()
   const refreshingKey = ref<string | null>(null)
   const includeKeys = computed(() => tabs.filter(tab => tab.alive).map(tab => tab.id))
+
+  let isHydrating = false
 
   function matchRoute(target: RouteLocationNormalizedLoaded | RouteLocationRaw): RouteMatchResult {
     const route =
@@ -256,9 +293,53 @@ export function createRouterTabs(
     return resolveKey(resolveRoute(router, route as RouteLocationRaw))
   }
 
+  function snapshot(): RouterTabsSnapshot {
+    const activeTab = tabs.find(tab => tab.id === activeId.value)
+    return {
+      tabs: tabs.map(toSnapshotTab),
+      active: activeTab ? activeTab.to : null
+    }
+  }
+
+  async function hydrate(snapshot: RouterTabsSnapshot): Promise<void> {
+    isHydrating = true
+    tabs.splice(0, tabs.length)
+    activeId.value = null
+    current.value = undefined
+
+    const records = snapshot?.tabs ?? []
+
+    for (const record of records) {
+      try {
+        const route = resolveRoute(router, record.to)
+        const base = fromSnapshotTab(record)
+        const tab = createTabFromRoute(route, base, options.keepAlive)
+        insertTab(tabs, tab, 'last', null)
+      } catch (error) {
+        if (import.meta.env?.DEV) {
+          console.warn('[RouterTabs] Failed to restore tab', record, error)
+        }
+      }
+    }
+
+    isHydrating = false
+
+    const target = snapshot?.active ?? records[records.length - 1]?.to ?? options.defaultRoute
+    if (target) {
+      try {
+        await router.replace(target)
+      } catch (error) {
+        if (import.meta.env?.DEV) {
+          console.warn('[RouterTabs] Failed to navigate to restored route', target, error)
+        }
+      }
+    }
+  }
+
   watch(
     () => router.currentRoute.value,
     route => {
+      if (isHydrating) return
       const tab = ensureTab(route as RouteLocationNormalizedLoaded)
       activeId.value = tab.id
       current.value = tab
@@ -290,6 +371,8 @@ export function createRouterTabs(
     reset,
     reload,
     getRouteKey,
-    matchRoute
+    matchRoute,
+    snapshot,
+    hydrate
   }
 }

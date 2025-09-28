@@ -259,7 +259,8 @@ $close-icon-size: 13px;
         color: $color-primary;
       }
 
-      &[disabled] {
+      &[disabled],
+      &[aria-disabled='true'] {
         color: #aaa;
         background: none;
         cursor: default;

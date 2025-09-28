@@ -5,14 +5,40 @@ import type {
   TabInput,
   RouterTabsOptions,
   CloseTabOptions,
-  RouterTabsContext
+  RouterTabsContext,
+  RouterTabsMenuConfig,
+  RouterTabsMenuItem,
+  RouterTabsMenuPreset,
+  RouterTabsSnapshot,
+  RouterTabsSnapshotTab
 } from './lib/core/types'
 
-export type { TabRecord, TabInput, RouterTabsOptions, CloseTabOptions, RouterTabsContext }
+export type {
+  TabRecord,
+  TabInput,
+  RouterTabsOptions,
+  CloseTabOptions,
+  RouterTabsContext,
+  RouterTabsMenuConfig,
+  RouterTabsMenuItem,
+  RouterTabsMenuPreset,
+  RouterTabsSnapshot,
+  RouterTabsSnapshotTab
+}
 
 export declare const routerTabsKey: import('vue').InjectionKey<RouterTabsContext>
 
 export declare function useRouterTabs(options?: { optional?: boolean }): RouterTabsContext | null
+
+export interface RouterTabsPiniaOptions {
+  storeId?: string
+  storageKey?: string
+  storage?: Storage | null
+}
+
+export declare function useRouterTabsPiniaPersistence(options?: RouterTabsPiniaOptions & { store?: import('pinia').StoreDefinition<any, any, any, any> }): import('pinia').Store<any, any, any, any>
+
+export declare const RouterTabsPinia: import('vue').DefineComponent<RouterTabsPiniaOptions, {}, {}, {}, {}, import('vue').ComponentOptionsMixin, import('vue').ComponentOptionsMixin, {}, string, import('vue').VNodeProps & import('vue').AllowedComponentProps & import('vue').ComponentCustomProps, Readonly<RouterTabsPiniaOptions>, {}>
 
 export declare const RouterTab: import('vue').DefineComponent<{
   tabs: {
@@ -47,6 +73,14 @@ export declare const RouterTab: import('vue').DefineComponent<{
     type: import('vue').PropType<import('./lib/core/types').TransitionLike>
     default: () => import('./lib/core/types').TransitionLike
   }
+  contextmenu: {
+    type: import('vue').PropType<boolean | RouterTabsMenuConfig[]>
+    default: true
+  }
+  storage: {
+    type: BooleanConstructor | StringConstructor
+    default: boolean
+  }
 }, any, any, {}, {}, import('vue').ComponentOptionsMixin, import('vue').ComponentOptionsMixin, Record<string, any>, string, import('vue').VNodeProps & import('vue').AllowedComponentProps & import('vue').ComponentCustomProps, Readonly<{
   tabs?: TabInput[] | undefined
   keepAlive?: boolean | undefined
@@ -56,6 +90,8 @@ export declare const RouterTab: import('vue').DefineComponent<{
   defaultPage?: RouteLocationRaw | undefined
   tabTransition?: import('./lib/core/types').TransitionLike | undefined
   pageTransition?: import('./lib/core/types').TransitionLike | undefined
+  contextmenu?: boolean | RouterTabsMenuConfig[] | undefined
+  storage?: boolean | string | undefined
 }> & {
   tabs?: TabInput[] | undefined
   keepAlive?: boolean | undefined
@@ -65,6 +101,8 @@ export declare const RouterTab: import('vue').DefineComponent<{
   defaultPage?: RouteLocationRaw | undefined
   tabTransition?: import('./lib/core/types').TransitionLike | undefined
   pageTransition?: import('./lib/core/types').TransitionLike | undefined
+  contextmenu?: boolean | RouterTabsMenuConfig[] | undefined
+  storage?: boolean | string | undefined
 }, {
   tabs: TabInput[]
   keepAlive: boolean
@@ -74,6 +112,8 @@ export declare const RouterTab: import('vue').DefineComponent<{
   defaultPage: RouteLocationRaw
   tabTransition: import('./lib/core/types').TransitionLike
   pageTransition: import('./lib/core/types').TransitionLike
+  contextmenu: true
+  storage: boolean
 }>
 
 export interface RouterTabPlugin extends Plugin {}

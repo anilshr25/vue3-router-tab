@@ -1,78 +1,39 @@
 <template>
-  <div class="tabs">
-    <ul class="tab-list">
-      <li
-        v-for="tab in tabs"
-        :key="tab.path"
-        class="tab-item"
-      >
-        <RouterLink
-          :to="tab.path"
-          class="tab-link"
-          active-class="active"
-        >
-          {{ tab.label }}
-        </RouterLink>
-      </li>
-    </ul>
+  <div id="app">
+    <nav class="nav">
+      <RouterLink to="/">Home</RouterLink>
+      <span>|</span>
+      <RouterLink to="/about">About</RouterLink>
+      <span>|</span>
+      <RouterLink to="/contact">Contact</RouterLink>
+    </nav>
 
-    <div class="tab-content">
-      <router-tab />
-    </div>
+    <router-tab>
+      <template #start>
+        <RouterTabsPinia storage-key="example-tabs" />
+      </template>
+    </router-tab>
   </div>
 </template>
 
-<script setup>
-const tabs = [
-  { path: "/", label: "Home" },
-  { path: "/about", label: "About" },
-  { path: "/contact", label: "Contact" }
-];
+<script setup lang="ts">
+import { RouterLink } from 'vue-router'
+import { RouterTabsPinia } from 'vue3-router-tab'
 </script>
 
 <style scoped>
-.tabs {
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  overflow: hidden;
-  background: #fff;
-}
-
-.tab-list {
+.nav {
+  margin-bottom: 12px;
   display: flex;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-bottom: 1px solid #e2e8f0;
+  gap: 8px;
 }
 
-.tab-item {
-  margin: 0;
-}
-
-.tab-link {
-  display: block;
-  padding: 10px 16px;
+.nav a {
+  color: rebeccapurple;
   text-decoration: none;
-  font-size: 14px;
-  color: #374151;
-  transition: background 0.2s, color 0.2s;
 }
 
-.tab-link:hover {
-  background: #f9fafb;
-}
-
-.tab-link.active {
-  background: #fff;
-  color: #2563eb;
-  font-weight: 600;
-  border-bottom: 2px solid #2563eb;
-}
-
-.tab-content {
-  padding: 16px;
-  font-size: 14px;
-  color: #374151;
+.nav span {
+  color: #666;
 }
 </style>

@@ -34,24 +34,41 @@ export interface TabRecord extends TabMeta {
   reusable: boolean
 }
 
-export interface ContextMenuItem {
-  id: string
-  title: string
-  icon?: string
-  tips?: string
-  visible?: boolean | ((ctx: ContextMenuContext) => boolean)
-  enable?: boolean | ((ctx: ContextMenuContext) => boolean)
-  handler: (ctx: ContextMenuContext) => void | Promise<void>
+export type RouterTabsMenuPreset =
+  | 'refresh'
+  | 'refreshAll'
+  | 'close'
+  | 'closeLefts'
+  | 'closeRights'
+  | 'closeOthers'
+
+export interface RouterTabsMenuContext {
+  target: TabRecord
+  controller: RouterTabsContext
 }
 
-export interface ContextMenuContext {
-  target: TabRecord
-  closeTab: (id: string, options?: CloseTabOptions) => void
-  closeOthers: (id: string) => void
-  closeLefts: (id: string) => void
-  closeRights: (id: string) => void
-  closeAll: () => void
-  refreshTab: (id: string) => void
+export interface RouterTabsMenuItem {
+  id: RouterTabsMenuPreset | string
+  label?: string
+  handler?: (ctx: RouterTabsMenuContext) => void | Promise<void>
+  visible?: boolean | ((ctx: RouterTabsMenuContext) => boolean)
+  enable?: boolean | ((ctx: RouterTabsMenuContext) => boolean)
+}
+
+export type RouterTabsMenuConfig = RouterTabsMenuPreset | RouterTabsMenuItem
+
+export interface RouterTabsSnapshotTab {
+  to: RouteLocationRaw
+  title?: TabRecord['title']
+  tips?: TabRecord['tips']
+  icon?: TabRecord['icon']
+  tabClass?: TabRecord['tabClass']
+  closable?: boolean
+}
+
+export interface RouterTabsSnapshot {
+  tabs: RouterTabsSnapshotTab[]
+  active?: RouteLocationRaw | null
 }
 
 export interface CloseTabOptions {
@@ -83,6 +100,7 @@ export interface RouterTabsContext {
   activeId: Ref<string | null>
   current: Ref<TabRecord | undefined>
   includeKeys: ComputedRef<string[]>
+  refreshingKey: Ref<string | null>
   openTab: (target: RouteLocationRaw, replace?: boolean, refresh?: boolean | 'sameTab') => Promise<void>
   closeTab: (id?: string, options?: CloseTabOptions) => Promise<void>
   removeTab: (id: string, opts?: { redirect?: RouteLocationRaw | null; force?: boolean }) => Promise<void>
@@ -92,5 +110,6 @@ export interface RouterTabsContext {
   reload: () => Promise<void>
   getRouteKey: (route: RouteLocationNormalizedLoaded | RouteLocationRaw) => string
   matchRoute: (route: RouteLocationNormalizedLoaded | RouteLocationRaw) => RouteMatchResult
-  refreshingKey: Ref<string | null>
+  snapshot: () => RouterTabsSnapshot
+  hydrate: (snapshot: RouterTabsSnapshot) => Promise<void>
 }

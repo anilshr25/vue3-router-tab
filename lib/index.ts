@@ -1,13 +1,15 @@
 import type { App } from 'vue'
 import RouterTab from './components/RouterTab.vue'
+import RouterTabsPinia from './components/RouterTabsPinia.vue'
 import { routerTabsKey } from './constants'
 import useRouterTabs from './useRouterTabs'
+import { useRouterTabsPiniaPersistence } from './pinia'
 
 import type { RouterTabsContext } from './core/types'
 
 export type { TabRecord, TabInput, RouterTabsOptions, CloseTabOptions } from './core/types'
 
-export { routerTabsKey, useRouterTabs }
+export { routerTabsKey, useRouterTabs, useRouterTabsPiniaPersistence, RouterTabsPinia }
 
 import "./scss/index.scss";
 

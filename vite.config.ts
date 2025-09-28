@@ -17,7 +17,7 @@ export default defineConfig({
       formats: ['es', 'cjs']
     },
     rollupOptions: {
-      external: ["vue"],
+      external: ["vue", "pinia"],
       output: {
         exports: 'named', 
         globals: {
