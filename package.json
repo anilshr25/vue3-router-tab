@@ -1,0 +1,61 @@
+{
+  "name": "vue3-router-tab",
+  "version": "1.0.1",
+  "type": "module",
+  "files": [
+    "dist",
+    "lib",
+    "index.d.ts"
+  ],
+  "main": "dist/vue3-router-tab.umd.cjs",
+  "module": "dist/vue3-router-tab.js",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./dist/vue3-router-tab.js",
+      "require": "./dist/vue3-router-tab.umd.cjs"
+    },
+    "./style": "./dist/style.css"
+  },
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "vue": "^3.5.22",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "sass": "^1.93.2",
+    "sass-loader": "^16.0.5",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7",
+    "vite-plugin-dts": "^4.5.4",
+    "vite-plugin-libcss": "^1.1.2"
+  },
+  "keywords": [
+    "vue3-router-tab",
+    "vue3",
+    "router",
+    "tabs",
+    "tab"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/anilshr25/vue3-router-tab/#readme",
+  "description": "Simple Confirm Dialog verification plugin with Vue 3.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anilshr25/vue3-router-tab.git"
+  },
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/anilshr25/vue3-router-tab/issues"
+  },
+  "types": "index.d.ts",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "esbuild"
+    ]
+  }
+}
