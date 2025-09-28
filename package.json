@@ -1,6 +1,6 @@
 {
   "name": "vue3-router-tab",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "files": [
     "dist",
@@ -39,7 +39,11 @@
     "vue3",
     "router",
     "tabs",
-    "tab"
+    "tab",
+    "pinia",
+    "persistence",
+    "tab persistence",
+    "router-tab"
   ],
   "license": "MIT",
   "homepage": "https://github.com/anilshr25/vue3-router-tab/#readme",

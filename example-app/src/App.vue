@@ -9,9 +9,6 @@
     </nav>
 
     <router-tab>
-      <template #start>
-        <router-tabs />
-      </template>
     </router-tab>
   </div>
 </template>
