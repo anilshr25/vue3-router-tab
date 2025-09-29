@@ -15,6 +15,7 @@
             v-for="tab in tabs"
             :key="tab.id"
             :class="buildTabClass(tab)"
+            :data-title="tabTitle(tab)"
             @click="activate(tab)"
             @auxclick.middle.prevent="close(tab)"
             @contextmenu.prevent="showContextMenu(tab, $event)"

@@ -16,6 +16,7 @@ const routes = [
         meta: {
           title: 'Dashboard',
           icon: 'fas fa-home',
+          closable: false,
         },
       },
       {
