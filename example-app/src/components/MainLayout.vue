@@ -82,8 +82,9 @@ const menuItems: MenuItem[] = [
 ]
 
 const toggleTheme = () => {
-  theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark'
-  theme.change(window.localStorage.getItem('tab-theme-primary-color') ?? '#635bff')
+  theme.change(theme.global.current.value.dark ? 'light' : 'dark')
+  window.localStorage.setItem('tab-theme-style', theme.global.current.value.dark ? 'light' : 'dark')
+  window.localStorage.setItem('tab-theme-primary-color', theme.global.current.value.dark ? '#ffffff' : '#635bff')
 }
 
 const handleLogout = () => {

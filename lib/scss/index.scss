@@ -1,68 +1,42 @@
 @use "sass:math";
-@use "sass:string";
+@use "sass:color";
+@use "variables" as *;
 
-// Fallback palette (overridden by CSS vars when present)
-$primary-fallback: #635bff;
-$light-bg: #ffffff;
-$light-text: #1e293b;
-$light-border: rgba(15, 23, 42, 0.08);
-
-// Dark mode fallbacks
-$dark-bg: #0f172a;
-$dark-text: #e2e8f0;
-$dark-border: rgba(226, 232, 240, 0.12);
-
-$font-size: 14px;
-$tab-trans: all 0.3s ease-in-out;
-$hd-height: 40px;
-$tab-padding: 20px;
-$close-icon-margin: 4px;
-$close-icon-size: 13px;
-
-/// Utility to fetch a CSS variable with a graceful fallback.
-@function css-var($name, $fallback) {
-    @return string.unquote("var(#{$name}, #{$fallback})");
+// Theme Setup
+:root[data-theme="light"] {
+  color-scheme: light;
+  --router-tab-background: #{$router-tab-bg-light};
+  --router-tab-foreground: #{$router-tab-text-light};
+  --router-tab-border: #{$router-tab-border-light};
+  --router-tab-header-bg: #{$router-tab-bg-light};
 }
 
-/// Mixin for reduced motion preferences
-@mixin reduced-motion {
-  @media (prefers-reduced-motion: reduce) {
-    @content;
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --router-tab-active-border: #ffff;
+  --router-tab-background: #{$router-tab-bg-dark};
+  --router-tab-foreground: #{$router-tab-text-dark};
+  --router-tab-border: #{$router-tab-border-dark};
+  --router-tab-header-bg: #{$router-tab-bg-dark};
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --router-tab-background: #{$router-tab-bg-dark};
+    --router-tab-foreground: #{$router-tab-text-dark};
+    --router-tab-border: #{$router-tab-border-dark};
+    --router-tab-header-bg: #{$router-tab-bg-dark};
   }
 }
 
-/// Mixin for dark theme styles - works with data-theme="dark"
-@mixin dark-theme {
-  :root[data-theme="dark"] & {
-    @content;
-  }
-}
-
+// Main Component Styles
 .router-tab {
-  $bg: css-var(--router-tab-background, css-var(--theme-background, $light-bg));
-  $fg: css-var(--router-tab-foreground, css-var(--theme-foreground, $light-text));
-  $border: css-var(--router-tab-border, css-var(--theme-border, $light-border));
-  $primary: css-var(--router-tab-primary, css-var(--theme-primary, $primary-fallback));
-  $header-bg: css-var(--router-tab-header-bg, $bg);
-  $tooltip-bg: css-var(--router-tab-tooltip-background, rgba(15, 23, 42, 0.88));
-  $tooltip-fg: css-var(--router-tab-tooltip-foreground, #ffffff);
-  $tooltip-shadow: css-var(--router-tab-tooltip-shadow, 0 8px 24px rgba(15, 23, 42, 0.18));
-
   display: flex;
   flex-direction: column;
   min-height: 300px;
-  background-color: transparent;
-  color: inherit;
-
-  // Dark theme default values
-  @include dark-theme {
-    --router-tab-background: #{$dark-bg};
-    --router-tab-foreground: #{$dark-text};
-    --router-tab-border: #{$dark-border};
-    --router-tab-tooltip-background: rgba(226, 232, 240, 0.95);
-    --router-tab-tooltip-foreground: #{$dark-bg};
-    --router-tab-tooltip-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  }
+  background-color: var(--router-tab-background);
+  color: var(--router-tab-foreground);
 
   &__header {
     position: relative;
@@ -70,20 +44,22 @@ $close-icon-size: 13px;
     display: flex;
     flex: none;
     box-sizing: border-box;
-    height: $hd-height;
-    border-bottom: 1px solid $border;
-    background-color: transparent;
-    transition: all 0.2s ease-in-out;
+    height: var(--router-tab-header-height, $router-tab-header-height);
+    background-color: var(--router-tab-header-bg);
+    transition: $router-tab-transition-fast;
+    border-bottom: 1px solid var(--router-tab-border);
+  }
 
-    @include reduced-motion {
-      transition: none;
-    }
+  &__slot-start,
+  &__slot-end {
+    display: flex;
+    align-items: center;
   }
 
   &__scroll {
     position: relative;
     flex: 1 1 0px;
-    height: $hd-height;
+    height: var(--router-tab-header-height, $router-tab-header-height);
     overflow: hidden;
 
     &-container {
@@ -94,7 +70,6 @@ $close-icon-size: 13px;
       &.is-mobile {
         overflow-x: auto;
         overflow-y: hidden;
-        -webkit-overflow-scrolling: touch;
       }
     }
   }
@@ -112,10 +87,6 @@ $close-icon-size: 13px;
     opacity: 0;
     transition: opacity 0.3s ease-in-out;
 
-    @include reduced-motion {
-      transition: none;
-    }
-
     .router-tab__scroll:hover &,
     &.is-dragging {
       opacity: 1;
@@ -130,27 +101,9 @@ $close-icon-size: 13px;
       border-radius: $h;
       transition: background-color 0.3s ease-in-out;
 
-      @include reduced-motion {
-        transition: none;
-      }
-
       &:hover,
       .router-tab__scrollbar.is-dragging & {
         background-color: rgba(0, 0, 0, 0.2);
-      }
-    }
-
-    // Dark theme scrollbar
-    @include dark-theme {
-      background-color: rgba(255, 255, 255, 0.15);
-
-      .router-tab__scrollbar-thumb {
-        background-color: rgba(255, 255, 255, 0.2);
-
-        &:hover,
-        &.is-dragging {
-          background-color: rgba(255, 255, 255, 0.35);
-        }
       }
     }
   }
@@ -170,179 +123,90 @@ $close-icon-size: 13px;
     display: flex;
     flex: none;
     align-items: center;
-    padding: 0 $tab-padding;
+    padding: 0 var(--router-tab-padding, $router-tab-padding);
     color: inherit;
-    font-size: $font-size;
-    border: 1px solid $border;
-    border-left: none;
+    font-size: var(--router-tab-font-size, $router-tab-font-size);
     transform-origin: left bottom;
     cursor: pointer;
-    transition: $tab-trans;
+    transition: var(--router-tab-transition, $router-tab-transition);
     user-select: none;
     background-color: transparent;
-
-    @include reduced-motion {
-      transition: none;
-    }
+    border-right: 1px solid var(--router-tab-border);
 
     &:first-child {
-      border-left: 1px solid $border;
-    }
-
-    // Keyboard focus styles
-    &:focus-visible {
-      outline: 2px solid $primary;
-      outline-offset: -2px;
-      z-index: 1;
+      border-left: 1px solid var(--router-tab-border);
     }
 
     &.is-contextmenu {
-      color: $primary;
+      color: var(--router-tab-primary);
+    }
+
+    // Drag and drop states
+    &.is-dragging {
+      opacity: $router-tab-drag-opacity;
+      cursor: $router-tab-drag-cursor;
     }
 
     &.is-drag-over {
-      background: rgba(0, 0, 0, 0.05);
+      background: $router-tab-drag-over-bg;
       transition: background 0.15s ease;
 
-      @include dark-theme {
-        background: rgba(255, 255, 255, 0.08);
+      &::before {
+        content: "";
+        position: absolute;
+        left: -2px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--router-tab-primary);
       }
+    }
+
+    &[draggable="true"] {
+      cursor: $router-tab-drag-cursor;
     }
 
     &-title {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-      gap: var(--router-tab-title-gap, 0);
-      min-width: var(--router-tab-title-min-width, 30px);
-      max-width: var(--router-tab-title-max-width, 120px);
-      color: var(--router-tab-title-color, inherit);
-      font-weight: var(--router-tab-title-font-weight, inherit);
-      letter-spacing: var(--router-tab-title-letter-spacing, normal);
-      text-transform: var(--router-tab-title-transform, none);
+      min-width: $router-tab-title-min-width;
+      max-width: $router-tab-title-max-width;
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
-      transition: max-width 0.3s ease-in-out;
-
-      @include reduced-motion {
-        transition: none;
-      }
     }
 
     &-icon {
-      margin-right: 5px;
-      font-size: 16px;
-      flex-shrink: 0;
+      margin-right: $router-tab-icon-margin;
+      font-size: $router-tab-icon-size;
     }
 
     &:hover,
     &.is-active {
-      color: $primary;
+      color: var(--router-tab-active-border);
 
       &.is-closable {
-        padding: 0 ($tab-padding - math.div($close-icon-size + $close-icon-margin, 2));
+        padding: 0
+          calc(
+            var(--router-tab-padding, #{$router-tab-padding}) -
+              (#{$router-tab-close-icon-size} + #{$router-tab-close-icon-margin}) / 2
+          );
       }
 
       .router-tab__item-close {
-        width: $close-icon-size;
-        margin-left: $close-icon-margin;
+        width: $router-tab-close-icon-size;
+        margin-left: $router-tab-close-icon-margin;
 
         &::before,
         &::after {
-          background-color: #fff;
+          background-color: currentColor;
         }
-      }
-    }
-
-    &:hover {
-      .router-tab__item-title {
-        max-width: var(--router-tab-title-hover-max-width, 220px);
       }
     }
 
     &.is-active {
-      border-bottom-color: $bg;
-      // Fallback for browsers without color-mix support
-      background: rgba(99, 91, 255, 0.12);
-      background: color-mix(in srgb, $primary 12%, $bg 88%);
-      box-shadow: inset 0 -2px 0 rgba(99, 91, 255, 0.65);
-      box-shadow: inset 0 -2px 0 color-mix(in srgb, $primary 65%, transparent);
-      color: color-mix(in srgb, $primary 80%, $fg 20%);
-
-      &::after {
-        content: '';
-        position: absolute;
-        left: 16px;
-        right: 16px;
-        bottom: 6px;
-        height: 2px;
-        border-radius: 999px;
-        background: $primary;
-        opacity: 0.6;
-        pointer-events: none;
-      }
-    }
-
-    &[data-title] {
-      &::after {
-        content: attr(data-title);
-        position: absolute;
-        left: 50%;
-        bottom: calc(100% + 8px);
-        display: inline-block;
-        max-width: 320px;
-        padding: 4px 10px;
-        border-radius: 6px;
-        background: $tooltip-bg;
-        color: $tooltip-fg;
-        font-size: 12px;
-        line-height: 1.3;
-        text-align: center;
-        white-space: normal;
-        word-break: break-word;
-        transform: translate(-50%, 4px);
-        box-shadow: $tooltip-shadow;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.2s ease, transform 0.2s ease;
-        z-index: 10;
-
-        @include reduced-motion {
-          transition: opacity 0.2s ease;
-          transform: translate(-50%, 0);
-        }
-      }
-
-      &::before {
-        content: '';
-        position: absolute;
-        left: 50%;
-        bottom: calc(100% + 4px);
-        width: 8px;
-        height: 8px;
-        background: $tooltip-bg;
-        transform: translate(-50%, 6px) rotate(45deg);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.2s ease, transform 0.2s ease;
-        z-index: 9;
-
-        @include reduced-motion {
-          transition: opacity 0.2s ease;
-          transform: translate(-50%, 0) rotate(45deg);
-        }
-      }
-
-      &:hover::after {
-        opacity: 1;
-        transform: translate(-50%, 0);
-      }
-
-      &:hover::before {
-        opacity: 1;
-        transform: translate(-50%, 0) rotate(45deg);
-      }
+      background-color: var(--router-tab-background);
+      color: var(--router-tab-active-border);
+      border-bottom: 2px solid var(--router-tab-active-border);
+      font-weight: 510;
     }
 
     &-close {
@@ -351,25 +215,14 @@ $close-icon-size: 13px;
       position: relative;
       display: block;
       width: 0;
-      height: $close-icon-size;
+      height: $router-tab-close-icon-size;
       margin-left: 0;
       overflow: hidden;
       border-radius: 50%;
       cursor: pointer;
-      transition: $tab-trans;
+      transition: var(--router-tab-transition, $router-tab-transition);
       background: transparent;
       border: none;
-      flex-shrink: 0;
-
-      @include reduced-motion {
-        transition: none;
-      }
-
-      // Keyboard focus
-      &:focus-visible {
-        outline: 2px solid $primary;
-        outline-offset: 2px;
-      }
 
       &::before,
       &::after {
@@ -382,11 +235,7 @@ $close-icon-size: 13px;
         margin-left: math.div(-$inner, 2);
         background-color: currentColor;
         transition: background-color 0.2s ease-in-out;
-        content: '';
-
-        @include reduced-motion {
-          transition: none;
-        }
+        content: "";
       }
 
       &::before {
@@ -398,21 +247,11 @@ $close-icon-size: 13px;
       }
 
       &:hover {
-        // Fallback for browsers without color-mix
-        background-color: rgba(99, 91, 255, 0.4);
-        background-color: color-mix(in srgb, $primary 40%, #ffffff 60%);
+        background-color: color-mix(in srgb, var(--router-tab-primary) 40%, transparent 60%);
 
         &::before,
         &::after {
           background-color: #fff;
-        }
-      }
-
-      // Dark theme close button
-      @include dark-theme {
-        &:hover {
-          background-color: rgba(99, 91, 255, 0.6);
-          background-color: color-mix(in srgb, $primary 60%, transparent 40%);
         }
       }
     }
@@ -421,114 +260,88 @@ $close-icon-size: 13px;
   &__contextmenu {
     position: fixed;
     z-index: 1000;
-    min-width: 140px;
-    padding: 8px 0;
-    font-size: $font-size;
-    background: $bg;
-    border: 1px solid $border;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
-    border-radius: 8px;
+    min-width: $router-tab-contextmenu-min-width;
+    padding: $router-tab-contextmenu-padding;
+    font-size: var(--router-tab-font-size, $router-tab-font-size);
+    background: var(--router-tab-background);
+    border: 1px solid var(--router-tab-border);
+    box-shadow: $router-tab-contextmenu-shadow;
+    border-radius: $router-tab-contextmenu-border-radius;
 
-    // Dark theme context menu
-    @include dark-theme {
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    }
-
-    a,
-    button {
+    &-item {
       display: block;
       width: 100%;
-      padding: 0 16px;
-      line-height: 30px;
+      padding: $router-tab-contextmenu-item-padding;
+      line-height: $router-tab-contextmenu-item-height;
       text-align: left;
+      text-decoration: none;
       background: transparent;
       border: none;
       color: inherit;
       cursor: pointer;
       font: inherit;
       transition: background-color 0.2s ease-in-out;
+      border-radius: calc(#{$router-tab-contextmenu-border-radius} - 4px);
 
-      @include reduced-motion {
-        transition: none;
-      }
-
-      // Keyboard focus
-      &:focus-visible {
-        outline: 2px solid $primary;
-        outline-offset: -2px;
-      }
-
-      &[aria-disabled='true'] {
+      &[aria-disabled="true"] {
         color: rgba(148, 163, 184, 0.6);
         pointer-events: none;
         cursor: not-allowed;
-
-        @include dark-theme {
-          color: rgba(226, 232, 240, 0.3);
-        }
       }
 
-      &:hover:not([aria-disabled='true']),
-      &:focus-visible:not([aria-disabled='true']) {
-        // Fallback for browsers without color-mix
-        background: rgba(99, 91, 255, 0.2);
-        background: color-mix(in srgb, $primary 20%, #ffffff 80%);
-        color: $primary;
-
-        @include dark-theme {
-          background: color-mix(in srgb, $primary 25%, transparent 75%);
-        }
+      &:hover:not([aria-disabled="true"]),
+      &:focus-visible {
+        background: color-mix(in srgb, var(--router-tab-primary) 10%, transparent 90%);
+        color: var(--router-tab-primary);
       }
     }
   }
-}
 
-.router-tab__container {
-  padding: 1rem;
-  position: relative;
-  flex: 1 1 auto;
-  background-color: transparent;
+  &__container {
+    position: relative;
+    flex: 1 1 auto;
+    background-color: var(--router-tab-background);
+    overflow: hidden;
+  }
+}
+.router-tab__item.is-active:after {
+  display: none !important;
 }
 
 .router-tab__item.is-active + .router-tab__item {
-  border-left-color: css-var(--router-tab-border, css-var(--theme-border, $light-border));
+  border-left-color: transparent;
 }
 
-// Container query support (progressive enhancement)
-@supports (container-type: inline-size) {
-  .router-tab {
-    container-type: inline-size;
-    container-name: router-tab;
-  }
-
-  @container router-tab (max-width: 600px) {
-    .router-tab__item {
-      padding: 0 12px;
-
-      &-title {
-        max-width: var(--router-tab-title-max-width, 80px);
-      }
-
-      &:hover .router-tab__item-title {
-        max-width: var(--router-tab-title-hover-max-width, 150px);
-      }
-    }
-  }
+// Transition animations
+.router-tab-zoom-enter-active,
+.router-tab-zoom-leave-active {
+  transition: all 0.3s ease;
 }
 
-// High contrast mode support
-@media (prefers-contrast: high) {
-  .router-tab {
-    &__item {
-      border-width: 2px;
+.router-tab-zoom-enter-from,
+.router-tab-zoom-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
+}
 
-      &.is-active {
-        border-bottom-width: 3px;
-      }
+.router-tab-swap-enter-active,
+.router-tab-swap-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
 
-      &:focus-visible {
-        outline-width: 3px;
-      }
-    }
-  }
+.router-tab-swap-enter-from {
+  opacity: 0;
+  transform: translateX(10px);
+}
+
+.router-tab-swap-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.router-tab-page {
+  width: 100%;
+  height: 100%;
 }

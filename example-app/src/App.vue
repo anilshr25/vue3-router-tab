@@ -8,17 +8,17 @@ import { onMounted, watch } from "vue";
 import { setRouterTabsTheme, setRouterTabsPrimary } from "vue3-router-tab";
 import { useTheme } from "vuetify";
 
-const theme = useTheme();
-
 const setTabThemeStyle = () => {
-  watch(() => {
-    setRouterTabsTheme(theme.global.current.value.dark ? "dark" : "light");
-    setRouterTabsPrimary(
-      theme.global.current.value.dark
-        ? theme.themes.value.dark.colors.primary
-        : theme.themes.value.light.colors.primary
-    );
-  });
+  const themeStyle = useTheme();
+
+  watch(
+    () => themeStyle.current.value,
+    () => {
+      setRouterTabsTheme(window.localStorage.getItem("tab-theme-style") ?? "system");
+      setRouterTabsPrimary(window.localStorage.getItem("tab-theme-primary-color") ?? "#635bff");
+    },
+    { immediate: true }
+  );
 };
 onMounted(() => {
   setTabThemeStyle();
