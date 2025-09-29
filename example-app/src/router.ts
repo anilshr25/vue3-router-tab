@@ -1,14 +1,9 @@
 import { createRouter, createWebHistory } from "vue-router";
 
-import Home from "./views/Orders.vue";
-import About from "./views/Users.vue";
-import Profile from "./views/Products.vue";
-import Contact from "./views/Analytics.vue";
-
 const routes = [
   {
     path: '/',
-    redirect: '/home',
+    redirect: '/dashboard',
     component: () => import('./layouts/Default.vue'),
     meta: {
       middleware: 'auth',
