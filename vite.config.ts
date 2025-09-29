@@ -21,7 +21,8 @@ export default defineConfig({
       output: {
         exports: 'named', 
         globals: {
-          vue: "Vue",
+          vue: 'Vue',
+          pinia: 'Pinia'
         }
       }
     }

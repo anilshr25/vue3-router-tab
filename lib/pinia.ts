@@ -78,55 +78,72 @@ function createDefaultStore(options: RouterTabsPiniaOptions) {
  * ```
  */
 export function useRouterTabsPiniaPersistence(options: RouterTabsPiniaOptions = {}) {
-  const controller = useRouterTabs({ optional: true })
-  if (!controller) {
-    throw new Error('[RouterTabs] Pinia helper must be used inside <router-tab>.')
-  }
   const Store = options.store ?? createDefaultStore(options)
   const store = Store()
   const hydrating = ref(false)
+  let initialized = false
 
-  onMounted(async () => {
-    store.load()
-    const snapshot = store.snapshot
-    if (snapshot && snapshot.tabs?.length) {
-      try {
-        hydrating.value = true
-        await controller.hydrate(snapshot)
-      } finally {
-        hydrating.value = false
+  const attemptSetup = (controller: NonNullable<ReturnType<typeof useRouterTabs>>) => {
+    if (!controller || initialized) return
+    initialized = true
+
+    onMounted(async () => {
+      store.load()
+      const snapshot = store.snapshot
+
+      if (snapshot && snapshot.tabs?.length) {
+        try {
+          hydrating.value = true
+          await controller.hydrate(snapshot)
+        } finally {
+          hydrating.value = false
+        }
+      } else {
+        try {
+          hydrating.value = true
+          const fallback = options.fallbackRoute ?? controller.options.defaultRoute
+          await controller.reset(fallback)
+        } finally {
+          hydrating.value = false
+        }
       }
-    } else {
-      try {
-        hydrating.value = true
-        const fallback = options.fallbackRoute ?? controller.options.defaultRoute
-        await controller.reset(fallback)
-      } finally {
-        hydrating.value = false
-      }
-    }
 
-    store.setSnapshot(controller.snapshot())
-  })
-
-  watch(
-    () => ({
-      tabs: controller.tabs.map(tab => ({
-        to: tab.to,
-        title: tab.title,
-        tips: tab.tips,
-        icon: tab.icon,
-        tabClass: tab.tabClass,
-        closable: tab.closable
-      })),
-      active: controller.activeId.value
-    }),
-    () => {
-      if (hydrating.value) return
       store.setSnapshot(controller.snapshot())
-    },
-    { deep: true }
-  )
+    })
+
+    watch(
+      () => ({
+        tabs: controller.tabs.map(tab => ({
+          to: tab.to,
+          title: tab.title,
+          tips: tab.tips,
+          icon: tab.icon,
+          tabClass: tab.tabClass,
+          closable: tab.closable
+        })),
+        active: controller.activeId.value
+      }),
+      () => {
+        if (hydrating.value) return
+        store.setSnapshot(controller.snapshot())
+      },
+      { deep: true }
+    )
+  }
+
+  const controller = useRouterTabs({ optional: true })
+  if (controller) {
+    attemptSetup(controller)
+  } else {
+    onMounted(() => {
+      const lateController = useRouterTabs({ optional: true })
+      if (lateController) {
+        attemptSetup(lateController)
+      } else if (import.meta.env?.DEV) {
+        console.warn('[RouterTabs] Pinia helper must be used inside <router-tab>.')
+      }
+    })
+  }
 
   return store
 }
