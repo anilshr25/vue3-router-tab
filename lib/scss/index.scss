@@ -72,7 +72,7 @@ $close-icon-size: 13px;
     box-sizing: border-box;
     height: $hd-height;
     border-bottom: 1px solid $border;
-    background-color: $header-bg;
+    background-color: transparent;
     transition: all 0.2s ease-in-out;
 
     @include reduced-motion {
