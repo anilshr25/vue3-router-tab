@@ -26,9 +26,9 @@
             <a
               v-if="isClosable(tab)"
               class="router-tab__item-close"
+              type="button"
               @click.stop="close(tab)"
-            >
-          </a>
+            />
           </li>
         </transition-group>
       </div>
@@ -110,15 +110,15 @@ import type {
   RouterTabsMenuItem,
   RouterTabsMenuPreset,
   RouterTabsOptions,
-  RouterTabsSnapshot,
+  RouterTabsPersistenceOptions,
   TabInput,
   TabRecord,
   TransitionLike
 } from '../core/types'
 import { getTransOpt } from '../util/index'
 import { routerTabsKey } from '../constants'
+import { useRouterTabsPersistence } from '../persistence'
 
-const hasSessionStorage = typeof window !== 'undefined' && 'sessionStorage' in window
 
 interface ResolvedMenuItem {
   id: string
@@ -167,9 +167,13 @@ export default defineComponent({
       type: [Boolean, Array] as PropType<boolean | RouterTabsMenuConfig[]>,
       default: true
     },
-    storage: {
-      type: [Boolean, String],
-      default: false
+    cookieKey: {
+      type: String,
+      default: null
+    },
+    persistence: {
+      type: Object as PropType<RouterTabsPersistenceOptions | null>,
+      default: null
     }
   },
   setup(props) {
@@ -195,6 +199,14 @@ export default defineComponent({
     provide(routerTabsKey, controller)
     instance.appContext.config.globalProperties.$tabs = controller
 
+    if (props.cookieKey || props.persistence) {
+      const options: RouterTabsPersistenceOptions = {
+        ...(props.persistence ?? {})
+      }
+      if (props.cookieKey) options.cookieKey = props.cookieKey
+      useRouterTabsPersistence(options)
+    }
+
     const tabTransitionProps = computed(() => getTransOpt(props.tabTransition))
     const pageTransitionProps = computed(() => getTransOpt(props.pageTransition))
 
@@ -203,15 +215,6 @@ export default defineComponent({
       target: null as TabRecord | null,
       position: { x: 0, y: 0 }
     })
-
-    const storageKey = computed(() => {
-      if (!props.storage || !hasSessionStorage) return null
-      if (typeof props.storage === 'string') return props.storage
-      const base = router.options?.history?.base ?? ''
-      return `router-tabs:${base || 'default'}`
-    })
-
-    let restoring = Boolean(storageKey.value)
 
     type MenuConfig = RouterTabsMenuConfig
     type MenuActionContext = RouterTabsMenuContext
@@ -406,49 +409,13 @@ export default defineComponent({
       return controller.refreshingKey.value === controller.getRouteKey(route)
     }
 
-    async function restoreTabsFromStorage() {
-      const key = storageKey.value
-      if (!key || !hasSessionStorage) return
-      const raw = window.sessionStorage.getItem(key)
-      if (!raw) return
-
-      try {
-        const parsed = JSON.parse(raw) as RouterTabsSnapshot
-        if (!parsed || !Array.isArray(parsed.tabs)) return
-        restoring = true
-        await controller.hydrate(parsed)
-      } catch (error) {
-        if (import.meta.env?.DEV) {
-          console.warn('[RouterTabs] Failed to restore tabs from storage', error)
-        }
-      } finally {
-        restoring = false
-        persistTabsSnapshot()
-      }
-    }
-
-    function persistTabsSnapshot() {
-      const key = storageKey.value
-      if (!key || !hasSessionStorage || restoring) return
-      try {
-        const snapshot = controller.snapshot()
-        window.sessionStorage.setItem(key, JSON.stringify(snapshot))
-      } catch (error) {
-        if (import.meta.env?.DEV) {
-          console.warn('[RouterTabs] Failed to persist tabs snapshot', error)
-        }
-      }
-    }
-
     onMounted(() => {
       document.addEventListener('keydown', hideContextMenu)
-      restoreTabsFromStorage()
     })
 
     onBeforeUnmount(() => {
       document.removeEventListener('keydown', hideContextMenu)
       instance.appContext.config.globalProperties.$tabs = null
-      persistTabsSnapshot()
     })
 
     watch(
@@ -477,25 +444,6 @@ export default defineComponent({
           hideContextMenu()
         }
       }
-    )
-
-    watch(
-      () => ({
-        key: storageKey.value,
-        tabs: controller.tabs.map(tab => ({
-          to: tab.to,
-          title: tab.title,
-          tips: tab.tips,
-          icon: tab.icon,
-          tabClass: tab.tabClass,
-          closable: tab.closable
-        })),
-        active: controller.activeId.value
-      }),
-      () => {
-        persistTabsSnapshot()
-      },
-      { deep: true }
     )
 
     const includeKeys = controller.includeKeys

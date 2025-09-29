@@ -30,16 +30,21 @@ export declare const routerTabsKey: import('vue').InjectionKey<RouterTabsContext
 
 export declare function useRouterTabs(options?: { optional?: boolean }): RouterTabsContext | null
 
-export interface RouterTabsPiniaOptions {
-  storeId?: string
-  storageKey?: string
-  storage?: Storage | null
+export interface RouterTabsPersistenceOptions {
+  cookieKey?: string
+  expiresInDays?: number
+  path?: string
+  domain?: string
+  secure?: boolean
+  sameSite?: 'lax' | 'strict' | 'none'
+  serialize?: (snapshot: RouterTabsSnapshot | null) => string
+  deserialize?: (value: string | null) => RouterTabsSnapshot | null
   fallbackRoute?: import('vue-router').RouteLocationRaw
 }
 
-export declare function useRouterTabsPiniaPersistence(options?: RouterTabsPiniaOptions & { store?: import('pinia').StoreDefinition<any, any, any, any> }): import('pinia').Store<any, any, any, any>
+export declare function useRouterTabsPersistence(options?: RouterTabsPersistenceOptions): void
 
-export declare const RouterTabsPinia: import('vue').DefineComponent<RouterTabsPiniaOptions, {}, {}, {}, {}, import('vue').ComponentOptionsMixin, import('vue').ComponentOptionsMixin, {}, string, import('vue').VNodeProps & import('vue').AllowedComponentProps & import('vue').ComponentCustomProps, Readonly<RouterTabsPiniaOptions>, {}>
+export declare const RouterTabs: import('vue').DefineComponent<RouterTabsPersistenceOptions, {}, {}, {}, {}, import('vue').ComponentOptionsMixin, import('vue').ComponentOptionsMixin, {}, string, import('vue').VNodeProps & import('vue').AllowedComponentProps & import('vue').ComponentCustomProps, Readonly<RouterTabsPersistenceOptions>, {}>
 
 export declare const RouterTab: import('vue').DefineComponent<{
   tabs: {
@@ -78,9 +83,13 @@ export declare const RouterTab: import('vue').DefineComponent<{
     type: import('vue').PropType<boolean | RouterTabsMenuConfig[]>
     default: true
   }
-  storage: {
-    type: BooleanConstructor | StringConstructor
-    default: boolean
+  cookieKey: {
+    type: StringConstructor
+    default: string | null
+  }
+  persistence: {
+    type: import('vue').PropType<RouterTabsPersistenceOptions | null>
+    default: RouterTabsPersistenceOptions | null
   }
 }, any, any, {}, {}, import('vue').ComponentOptionsMixin, import('vue').ComponentOptionsMixin, Record<string, any>, string, import('vue').VNodeProps & import('vue').AllowedComponentProps & import('vue').ComponentCustomProps, Readonly<{
   tabs?: TabInput[] | undefined
@@ -92,7 +101,8 @@ export declare const RouterTab: import('vue').DefineComponent<{
   tabTransition?: import('./lib/core/types').TransitionLike | undefined
   pageTransition?: import('./lib/core/types').TransitionLike | undefined
   contextmenu?: boolean | RouterTabsMenuConfig[] | undefined
-  storage?: boolean | string | undefined
+  cookieKey?: string | undefined
+  persistence?: RouterTabsPersistenceOptions | null | undefined
 }> & {
   tabs?: TabInput[] | undefined
   keepAlive?: boolean | undefined
@@ -103,7 +113,8 @@ export declare const RouterTab: import('vue').DefineComponent<{
   tabTransition?: import('./lib/core/types').TransitionLike | undefined
   pageTransition?: import('./lib/core/types').TransitionLike | undefined
   contextmenu?: boolean | RouterTabsMenuConfig[] | undefined
-  storage?: boolean | string | undefined
+  cookieKey?: string | undefined
+  persistence?: RouterTabsPersistenceOptions | null | undefined
 }, {
   tabs: TabInput[]
   keepAlive: boolean
@@ -114,7 +125,8 @@ export declare const RouterTab: import('vue').DefineComponent<{
   tabTransition: import('./lib/core/types').TransitionLike
   pageTransition: import('./lib/core/types').TransitionLike
   contextmenu: true
-  storage: boolean
+  cookieKey: string | null
+  persistence: RouterTabsPersistenceOptions | null
 }>
 
 export interface RouterTabPlugin extends Plugin {}

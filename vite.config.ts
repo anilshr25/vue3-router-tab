@@ -17,11 +17,11 @@ export default defineConfig({
       formats: ['es', 'umd']
     },
     rollupOptions: {
-      external: ["vue", "pinia"],
+      external: ["vue"],
       output: {
         exports: 'named', 
         globals: {
-          vue: "Vue",
+          vue: 'Vue'
         }
       }
     }

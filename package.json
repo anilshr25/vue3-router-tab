@@ -1,6 +1,6 @@
 {
   "name": "vue3-router-tab",
-  "version": "1.0.7",
+  "version": "1.0.9",
   "type": "module",
   "files": [
     "dist",
@@ -12,9 +12,9 @@
   "exports": {
     ".": {
       "types": "./index.d.ts",
-      "default": "./dist/vue3-router-tab.js",
       "import": "./dist/vue3-router-tab.js",
-      "require": "./dist/vue3-router-tab.umd.cjs"
+      "require": "./dist/vue3-router-tab.umd.cjs",
+      "default": "./dist/vue3-router-tab.js"
     },
     "./style": "./dist/vue3-router-tab.css",
     "./package.json": "./package.json"
@@ -23,12 +23,12 @@
     "build": "vite build"
   },
   "dependencies": {
-    "pinia": "^3.0.3",
     "vue": "^3.5.22",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
+    "pinia": "^3.0.3",
     "sass": "^1.93.2",
     "sass-loader": "^16.0.5",
     "typescript": "^5.9.2",
@@ -42,7 +42,10 @@
     "router",
     "tabs",
     "tab",
-    "router-tab"
+    "router-tab",
+    "router-tabs",
+    "cookies",
+    "persistence"
   ],
   "license": "MIT",
   "homepage": "https://github.com/anilshr25/vue3-router-tab/#readme",
