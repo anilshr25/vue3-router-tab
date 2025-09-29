@@ -7,15 +7,15 @@
     "lib",
     "index.d.ts"
   ],
-  "main": "dist/vue3-router-tab.umd.cjs",
-  "module": "dist/vue3-router-tab.js",
+  "main": "dist/vue3-router-tab.cjs.js",
+  "module": "dist/vue3-router-tab.es.js",
   "exports": {
     ".": {
       "types": "./index.d.ts",
-      "import": "./dist/vue3-router-tab.js",
-      "require": "./dist/vue3-router-tab.umd.cjs"
+      "import": "./dist/vue3-router-tab.es.js",
+      "require": "./dist/vue3-router-tab.cjs.js"
     },
-    "./style": "./dist/style.css"
+    "./style": "./dist/vue3-router-tab.css"
   },
   "scripts": {
     "build": "vite build"
