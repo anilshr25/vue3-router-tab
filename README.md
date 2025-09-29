@@ -36,6 +36,18 @@ The plugin registers the `<router-tab>` component globally. It also exposes an o
 </template>
 ```
 
+Need to customise the rendered output? Provide a slot and use the routed component directly—see [`example-app/src/App.vue`](example-app/src/App.vue) for a working sample:
+
+```vue
+<router-tab cookie-key="app-tabs">
+  <template #default="{ Component, route }">
+    <Suspense>
+      <component :is="Component" :key="route.fullPath" />
+    </Suspense>
+  </template>
+</router-tab>
+```
+
 Configure route metadata to control tab labels, icons, and lifecycle behaviour:
 
 ```ts
@@ -95,6 +107,20 @@ useRouterTabsPersistence({
 </script>
 ```
 The composable also exposes `serialize` / `deserialize` options so you can encrypt or customise the cookie payload.
+
+### Custom rendering
+
+You can override the default routed view by providing a `#default` slot. The slot receives the same values you would normally get from `<RouterView v-slot>`:
+
+```vue
+<router-tab cookie-key="app-tabs">
+  <template #default="{ Component, route }">
+    <Suspense>
+      <component :is="Component" :key="route.fullPath" />
+    </Suspense>
+  </template>
+</router-tab>
+```
 
 ## Customising the context menu
 

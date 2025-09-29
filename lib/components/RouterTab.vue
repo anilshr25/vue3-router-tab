@@ -39,36 +39,41 @@
     </header>
 
     <div class="router-tab__container">
-      <RouterView v-slot="{ Component, route }">
-        <transition
-          v-bind="pageTransitionProps"
-          appear
-        >
-          <KeepAlive
-            v-if="controller.options.keepAlive"
-            :include="includeKeys"
-            :max="controller.options.maxAlive || undefined"
+      <RouterView v-slot="routerSlot">
+        <template v-if="hasCustomSlot">
+          <slot v-bind="{ ...routerSlot, controller }" />
+        </template>
+        <template v-else>
+          <transition
+            v-bind="pageTransitionProps"
+            appear
+          >
+            <KeepAlive
+              v-if="controller.options.keepAlive"
+              :include="includeKeys"
+              :max="controller.options.maxAlive || undefined"
+            >
+              <component
+                v-if="!isRefreshing(routerSlot.route)"
+                :is="routerSlot.Component"
+                :key="controller.getRouteKey(routerSlot.route)"
+                class="router-tab-page"
+              />
+            </KeepAlive>
+          </transition>
+
+          <transition
+            v-bind="pageTransitionProps"
+            appear
           >
             <component
-              v-if="!isRefreshing(route)"
-              :is="Component"
-              :key="controller.getRouteKey(route)"
+              v-if="!controller.options.keepAlive || isRefreshing(routerSlot.route)"
+              :is="routerSlot.Component"
+              :key="controller.getRouteKey(routerSlot.route) + (isRefreshing(routerSlot.route) ? '-refresh' : '')"
               class="router-tab-page"
             />
-          </KeepAlive>
-        </transition>
-
-        <transition
-          v-bind="pageTransitionProps"
-          appear
-        >
-          <component
-            v-if="!controller.options.keepAlive || isRefreshing(route)"
-            :is="Component"
-            :key="controller.getRouteKey(route) + (isRefreshing(route) ? '-refresh' : '')"
-            class="router-tab-page"
-          />
-        </transition>
+          </transition>
+        </template>
       </RouterView>
     </div>
 
@@ -198,6 +203,8 @@ export default defineComponent({
 
     provide(routerTabsKey, controller)
     instance.appContext.config.globalProperties.$tabs = controller
+
+    const hasCustomSlot = computed(() => Boolean(instance?.slots?.default))
 
     if (props.cookieKey || props.persistence) {
       const options: RouterTabsPersistenceOptions = {
@@ -464,7 +471,8 @@ export default defineComponent({
       hideContextMenu,
       tabTitle,
       isClosable,
-      isRefreshing
+      isRefreshing,
+      hasCustomSlot
     }
   }
 })
