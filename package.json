@@ -1,6 +1,6 @@
 {
   "name": "vue3-router-tab",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "module",
   "files": [
     "dist",
@@ -21,12 +21,12 @@
     "build": "vite build"
   },
   "dependencies": {
+    "pinia": "^3.0.3",
     "vue": "^3.5.22",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
-    "pinia": "^3.0.3",
     "sass": "^1.93.2",
     "sass-loader": "^16.0.5",
     "typescript": "^5.9.2",
