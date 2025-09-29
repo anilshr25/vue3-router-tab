@@ -1,4 +1,4 @@
-import type { App } from 'vue'
+import type { App, Plugin } from 'vue'
 import RouterTab from './components/RouterTab.vue'
 import RouterTabsPinia from './components/RouterTabsPinia.vue'
 import { routerTabsKey } from './constants'
@@ -9,15 +9,11 @@ import type { RouterTabsContext } from './core/types'
 
 export type { TabRecord, TabInput, RouterTabsOptions, CloseTabOptions } from './core/types'
 
-export { routerTabsKey, useRouterTabs, useRouterTabsPiniaPersistence, RouterTabsPinia as RouterTabs, RouterTabsPinia }
+export { routerTabsKey, useRouterTabs, useRouterTabsPiniaPersistence, RouterTabsPinia }
 
 import "./scss/index.scss";
 
-export interface RouterTabPlugin {
-  install(app: App): void
-}
-
-const plugin: RouterTabPlugin = {
+const plugin: Plugin = {
   install(app: App) {
     if ((plugin as any)._installed) return
     ;(plugin as any)._installed = true
@@ -49,4 +45,4 @@ const plugin: RouterTabPlugin = {
 
 export default plugin
 
-export { RouterTab }
+export { RouterTab, RouterTabsPinia as RouterTabs }
