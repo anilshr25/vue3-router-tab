@@ -98,7 +98,7 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
   } = options
 
   const controller = useRouterTabs({ optional: true })
-  const hydrating = ref(false)
+  const hydrating = ref(true)
 
   const setup = (ctrl: NonNullable<typeof controller>) => {
     onMounted(async () => {
@@ -127,6 +127,8 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
       } else {
         writeCookie(cookieKey, serialize(snapshot), options)
       }
+
+      hydrating.value = false
     })
 
     watch(

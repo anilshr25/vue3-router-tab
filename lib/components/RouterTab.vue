@@ -121,7 +121,7 @@ import type {
   TransitionLike
 } from '../core/types'
 import { getTransOpt } from '../util/index'
-import { routerTabsKey } from '../constants'
+import { routerTabsKey, routerTabsCookie } from '../constants'
 import { useRouterTabsPersistence } from '../persistence'
 
 
@@ -174,7 +174,7 @@ export default defineComponent({
     },
     cookieKey: {
       type: String,
-      default: null
+      default: routerTabsCookie
     },
     persistence: {
       type: Object as PropType<RouterTabsPersistenceOptions | null>,
@@ -206,11 +206,15 @@ export default defineComponent({
 
     const hasCustomSlot = computed(() => Boolean(instance?.slots?.default))
 
-    if (props.cookieKey || props.persistence) {
+    if (props.cookieKey !== null || props.persistence) {
       const options: RouterTabsPersistenceOptions = {
         ...(props.persistence ?? {})
       }
-      if (props.cookieKey) options.cookieKey = props.cookieKey
+      if (props.cookieKey !== null) {
+        options.cookieKey = props.cookieKey || routerTabsCookie
+      } else if (!options.cookieKey) {
+        options.cookieKey = routerTabsCookie
+      }
       useRouterTabsPersistence(options)
     }
 
