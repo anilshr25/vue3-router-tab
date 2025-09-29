@@ -13,6 +13,7 @@ import type {
   RouterTabsSnapshotTab,
   RouterTabsPersistenceOptions
 } from './lib/core/types'
+import type { RouterTabsThemeOptions } from './lib/theme'
 
 export type {
   TabRecord,
@@ -25,7 +26,8 @@ export type {
   RouterTabsMenuPreset,
   RouterTabsSnapshot,
   RouterTabsSnapshotTab,
-  RouterTabsPersistenceOptions
+  RouterTabsPersistenceOptions,
+  RouterTabsThemeOptions
 }
 
 export declare const routerTabsKey: import('vue').InjectionKey<RouterTabsContext>
@@ -33,6 +35,10 @@ export declare const routerTabsKey: import('vue').InjectionKey<RouterTabsContext
 export declare function useRouterTabs(options?: { optional?: boolean }): RouterTabsContext | null
 
 export declare function useRouterTabsPersistence(options?: RouterTabsPersistenceOptions): void
+
+export declare function initRouterTabsTheme(options?: RouterTabsThemeOptions): void
+export declare function setRouterTabsTheme(style: 'light' | 'dark' | 'system', options?: RouterTabsThemeOptions): void
+export declare function setRouterTabsPrimary(color: string, options?: RouterTabsThemeOptions): void
 
 export declare const RouterTabs: DefineComponent<RouterTabsPersistenceOptions, {}, {}, {}, {}, import('vue').ComponentOptionsMixin, import('vue').ComponentOptionsMixin, {}, string, import('vue').VNodeProps & import('vue').AllowedComponentProps & import('vue').ComponentCustomProps, Readonly<RouterTabsPersistenceOptions>, {}>
 

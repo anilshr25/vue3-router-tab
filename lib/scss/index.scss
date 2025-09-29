@@ -1,31 +1,63 @@
 @use "sass:math";
 @use "sass:color";
 
-// ----------------------
-// Variables
-// ----------------------
-$color-primary: #42b983;
-$border-color: #eaecef;
-$text-color: #4d4d4d;
+$default-primary: #635bff;
+$default-border: #e2e8f0;
+$default-text: #1e293b;
+$default-bg: #ffffff;
+$default-dark-bg: #0f172a;
+$default-dark-text: #e2e8f0;
+$default-dark-border: rgba(148, 163, 184, 0.35);
 
 $font-size: 14px;
-
-$border: 1px solid $border-color;
 $tab-trans: all 0.3s ease-in-out;
-
 $hd-height: 40px;
-
 $tab-padding: 20px;
 $close-icon-margin: 4px;
 $close-icon-size: 13px;
 
-// ----------------------
-// Router Tab Component
-// ----------------------
+:root {
+  --theme-primary: #{$default-primary};
+  --router-tab-primary: var(--theme-primary);
+  --router-tab-background: #{$default-bg};
+  --router-tab-foreground: #{$default-text};
+  --router-tab-border: #{$default-border};
+  --router-tab-header-bg: #{$default-bg};
+  color-scheme: light;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --router-tab-background: #{$default-bg};
+  --router-tab-foreground: #{$default-text};
+  --router-tab-border: #{$default-border};
+  --router-tab-header-bg: #{$default-bg};
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --router-tab-background: #{$default-dark-bg};
+  --router-tab-foreground: #{$default-dark-text};
+  --router-tab-border: #{$default-dark-border};
+  --router-tab-header-bg: #{color.adjust($default-dark-bg, $lightness: 5%)};
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --router-tab-background: #{$default-dark-bg};
+    --router-tab-foreground: #{$default-dark-text};
+    --router-tab-border: #{$default-dark-border};
+    --router-tab-header-bg: #{color.adjust($default-dark-bg, $lightness: 5%)};
+  }
+}
+
 .router-tab {
   display: flex;
   flex-direction: column;
   min-height: 300px;
+  background-color: var(--router-tab-background);
+  color: var(--router-tab-foreground);
 
   &__header {
     position: relative;
@@ -34,7 +66,8 @@ $close-icon-size: 13px;
     flex: none;
     box-sizing: border-box;
     height: $hd-height;
-    border-bottom: 1px solid $border-color;
+    border-bottom: 1px solid var(--router-tab-border);
+    background-color: var(--router-tab-header-bg);
     transition: all 0.2s ease-in-out;
   }
 
@@ -85,7 +118,7 @@ $close-icon-size: 13px;
 
       &:hover,
       .router-tab__scrollbar.is-dragging & {
-        background-color: rgba($color-primary, 0.8);
+        background-color: rgba(0, 0, 0, 0.2);
       }
     }
   }
@@ -106,46 +139,22 @@ $close-icon-size: 13px;
     flex: none;
     align-items: center;
     padding: 0 $tab-padding;
-    color: $text-color;
+    color: inherit;
     font-size: $font-size;
-    border: $border;
+    border: 1px solid var(--router-tab-border);
     border-left: none;
     transform-origin: left bottom;
     cursor: pointer;
     transition: $tab-trans;
     user-select: none;
+    background-color: transparent;
 
     &:first-child {
-      border-left: $border;
+      border-left: 1px solid var(--router-tab-border);
     }
 
     &.is-contextmenu {
-      color: #000;
-    }
-
-    &:hover,
-    &.is-active {
-      color: $color-primary;
-
-      &.is-closable {
-        padding: 0 (
-          $tab-padding - math.div($close-icon-size + $close-icon-margin, 2)
-        );
-      }
-
-      .router-tab__item-close {
-        width: $close-icon-size;
-        margin-left: $close-icon-margin;
-
-        &::before,
-        &::after {
-          border-color: $color-primary;
-        }
-      }
-    }
-
-    &.is-active {
-      border-bottom-color: #fff;
+      color: var(--router-tab-primary);
     }
 
     &.is-drag-over {
@@ -155,7 +164,7 @@ $close-icon-size: 13px;
 
     &-title {
       min-width: 30px;
-      max-width: 100px;
+      max-width: 120px;
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
@@ -164,6 +173,29 @@ $close-icon-size: 13px;
     &-icon {
       margin-right: 5px;
       font-size: 16px;
+    }
+
+    &:hover,
+    &.is-active {
+      color: var(--router-tab-primary);
+
+      &.is-closable {
+        padding: 0 ($tab-padding - math.div($close-icon-size + $close-icon-margin, 2));
+      }
+
+      .router-tab__item-close {
+        width: $close-icon-size;
+        margin-left: $close-icon-margin;
+
+        &::before,
+        &::after {
+          background-color: #fff;
+        }
+      }
+    }
+
+    &.is-active {
+      border-bottom-color: var(--router-tab-background);
     }
 
     &-close {
@@ -178,6 +210,8 @@ $close-icon-size: 13px;
       border-radius: 50%;
       cursor: pointer;
       transition: $tab-trans;
+      background: transparent;
+      border: none;
 
       &::before,
       &::after {
@@ -188,9 +222,9 @@ $close-icon-size: 13px;
         width: $inner;
         height: 1px;
         margin-left: math.div(-$inner, 2);
-        background-color: $text-color;
+        background-color: currentColor;
         transition: background-color 0.2s ease-in-out;
-        content: "";
+        content: '';
       }
 
       &::before {
@@ -202,7 +236,8 @@ $close-icon-size: 13px;
       }
 
       &:hover {
-        background-color: color.mix($text-color, #fff, 50%);
+        background-color: color-mix(in srgb, var(--router-tab-primary) 40%, #ffffff 60%);
+
         &::before,
         &::after {
           background-color: #fff;
@@ -211,115 +246,51 @@ $close-icon-size: 13px;
     }
   }
 
-  &__container {
-    position: relative;
-    flex: 1;
-    overflow-x: hidden;
-    overflow-y: auto;
-    background: #fff;
-    transition: all 0.4s ease-in-out;
-
-    > .router-alive {
-      height: 100%;
-    }
-  }
-
-  &__iframe {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  }
-
   &__contextmenu {
     position: fixed;
-    z-index: 999;
-    min-width: 120px;
+    z-index: 1000;
+    min-width: 140px;
     padding: 8px 0;
     font-size: $font-size;
-    background: #fff;
-    border: $border;
-    box-shadow: 1px 1px 4px 0 rgba(0, 0, 0, 0.1);
-    transform-origin: left top;
-    transition: all 0.25s ease-in;
+    background: var(--router-tab-background);
+    border: 1px solid var(--router-tab-border);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    border-radius: 8px;
 
-    &-item {
-      position: relative;
+    a,
+    button {
       display: block;
-      padding: 0 20px;
-      color: $text-color;
+      width: 100%;
+      padding: 0 16px;
       line-height: 30px;
+      text-align: left;
+      background: transparent;
+      border: none;
+      color: inherit;
       cursor: pointer;
-      transition: all 0.2s ease-in-out;
-      user-select: none;
+      font: inherit;
+      transition: background-color 0.2s ease-in-out;
 
-      &:hover,
-      &:active {
-        color: $color-primary;
-      }
-
-      &[disabled],
       &[aria-disabled='true'] {
-        color: #aaa;
-        background: none;
-        cursor: default;
+        color: rgba(148, 163, 184, 0.6);
         pointer-events: none;
       }
 
-      .has-icon & {
-        padding-left: 30px;
-      }
-    }
-
-    &-icon {
-      position: absolute;
-      top: 0;
-      left: 8px;
-      display: none;
-      line-height: 30px;
-
-      .has-icon & {
-        display: block;
+      &:hover,
+      &:focus-visible {
+        background: color-mix(in srgb, var(--router-tab-primary) 20%, #ffffff 80%);
+        color: var(--router-tab-primary);
       }
     }
   }
 }
 
-// ----------------------
-// Transitions
-// ----------------------
-.router-tab-zoom {
-  &-enter-active,
-  &-leave-active {
-    transition: all 0.4s;
-  }
-
-  &-enter,
-  &-leave-to {
-    transform: scale(0);
-    opacity: 0;
-  }
+.router-tab__container {
+  position: relative;
+  flex: 1 1 auto;
+  background-color: var(--router-tab-background);
 }
 
-.router-tab-swap {
-  $trans: 30px;
-
-  &-enter-active,
-  &-leave-active {
-    transition: all 0.5s;
-  }
-
-  &-enter,
-  &-leave-to {
-    opacity: 0;
-  }
-
-  &-enter {
-    transform: translateX(-#{$trans});
-  }
-
-  &-leave-to {
-    transform: translateX(#{$trans});
-  }
+.router-tab__item.is-active + .router-tab__item {
+  border-left-color: var(--router-tab-border);
 }
