@@ -13,8 +13,8 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, "lib/index.ts"),
       name: "vue3-router-tab",
-      fileName: (format) => `vue3-router-tab.${format}.js`,
-      formats: ['es', 'cjs']
+      fileName: (format) => format === 'es' ? 'vue3-router-tab.js' : 'vue3-router-tab.umd.cjs',
+      formats: ['es', 'umd']
     },
     rollupOptions: {
       external: ["vue", "pinia"],
