@@ -1,13 +1,10 @@
 @use "sass:math";
-@use "sass:color";
 
-$default-primary: #635bff;
-$default-border: #e2e8f0;
-$default-text: #1e293b;
-$default-bg: #ffffff;
-$default-dark-bg: #0f172a;
-$default-dark-text: #e2e8f0;
-$default-dark-border: rgba(148, 163, 184, 0.35);
+// Fallback palette (overridden by CSS vars when present)
+$primary-fallback: #635bff;
+$light-bg: #ffffff;
+$light-text: #1e293b;
+$light-border: rgba(15, 23, 42, 0.08);
 
 $font-size: 14px;
 $tab-trans: all 0.3s ease-in-out;
@@ -16,48 +13,23 @@ $tab-padding: 20px;
 $close-icon-margin: 4px;
 $close-icon-size: 13px;
 
-:root {
-  --theme-primary: #{$default-primary};
-  --router-tab-primary: var(--theme-primary);
-  --router-tab-background: #{$default-bg};
-  --router-tab-foreground: #{$default-text};
-  --router-tab-border: #{$default-border};
-  --router-tab-header-bg: #{$default-bg};
-  color-scheme: light;
-}
-
-:root[data-theme='light'] {
-  color-scheme: light;
-  --router-tab-background: #{$default-bg};
-  --router-tab-foreground: #{$default-text};
-  --router-tab-border: #{$default-border};
-  --router-tab-header-bg: #{$default-bg};
-}
-
-:root[data-theme='dark'] {
-  color-scheme: dark;
-  --router-tab-background: #{$default-dark-bg};
-  --router-tab-foreground: #{$default-dark-text};
-  --router-tab-border: #{$default-dark-border};
-  --router-tab-header-bg: #{color.adjust($default-dark-bg, $lightness: 5%)};
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    color-scheme: dark;
-    --router-tab-background: #{$default-dark-bg};
-    --router-tab-foreground: #{$default-dark-text};
-    --router-tab-border: #{$default-dark-border};
-    --router-tab-header-bg: #{color.adjust($default-dark-bg, $lightness: 5%)};
-  }
+/// Utility to fetch a CSS variable with a graceful fallback.
+@function css-var($name, $fallback) {
+  @return unquote("var(#{$name}, #{$fallback})");
 }
 
 .router-tab {
+  $bg: css-var(--router-tab-background, css-var(--theme-background, $light-bg));
+  $fg: css-var(--router-tab-foreground, css-var(--theme-foreground, $light-text));
+  $border: css-var(--router-tab-border, css-var(--theme-border, $light-border));
+  $primary: css-var(--router-tab-primary, css-var(--theme-primary, $primary-fallback));
+  $header-bg: css-var(--router-tab-header-bg, $bg);
+
   display: flex;
   flex-direction: column;
   min-height: 300px;
-  background-color: var(--router-tab-background);
-  color: var(--router-tab-foreground);
+  background-color: $bg;
+  color: $fg;
 
   &__header {
     position: relative;
@@ -66,8 +38,8 @@ $close-icon-size: 13px;
     flex: none;
     box-sizing: border-box;
     height: $hd-height;
-    border-bottom: 1px solid var(--router-tab-border);
-    background-color: var(--router-tab-header-bg);
+    border-bottom: 1px solid $border;
+    background-color: $header-bg;
     transition: all 0.2s ease-in-out;
   }
 
@@ -141,7 +113,7 @@ $close-icon-size: 13px;
     padding: 0 $tab-padding;
     color: inherit;
     font-size: $font-size;
-    border: 1px solid var(--router-tab-border);
+    border: 1px solid $border;
     border-left: none;
     transform-origin: left bottom;
     cursor: pointer;
@@ -150,11 +122,11 @@ $close-icon-size: 13px;
     background-color: transparent;
 
     &:first-child {
-      border-left: 1px solid var(--router-tab-border);
+      border-left: 1px solid $border;
     }
 
     &.is-contextmenu {
-      color: var(--router-tab-primary);
+      color: $primary;
     }
 
     &.is-drag-over {
@@ -177,7 +149,7 @@ $close-icon-size: 13px;
 
     &:hover,
     &.is-active {
-      color: var(--router-tab-primary);
+      color: $primary;
 
       &.is-closable {
         padding: 0 ($tab-padding - math.div($close-icon-size + $close-icon-margin, 2));
@@ -195,7 +167,7 @@ $close-icon-size: 13px;
     }
 
     &.is-active {
-      border-bottom-color: var(--router-tab-background);
+      border-bottom-color: $bg;
     }
 
     &-close {
@@ -236,7 +208,7 @@ $close-icon-size: 13px;
       }
 
       &:hover {
-        background-color: color-mix(in srgb, var(--router-tab-primary) 40%, #ffffff 60%);
+        background-color: color-mix(in srgb, $primary 40%, #ffffff 60%);
 
         &::before,
         &::after {
@@ -252,8 +224,8 @@ $close-icon-size: 13px;
     min-width: 140px;
     padding: 8px 0;
     font-size: $font-size;
-    background: var(--router-tab-background);
-    border: 1px solid var(--router-tab-border);
+    background: $bg;
+    border: 1px solid $border;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
     border-radius: 8px;
 
@@ -278,19 +250,20 @@ $close-icon-size: 13px;
 
       &:hover,
       &:focus-visible {
-        background: color-mix(in srgb, var(--router-tab-primary) 20%, #ffffff 80%);
-        color: var(--router-tab-primary);
+        background: color-mix(in srgb, $primary 20%, #ffffff 80%);
+        color: $primary;
       }
     }
   }
 }
 
 .router-tab__container {
+  padding: 1rem;
   position: relative;
   flex: 1 1 auto;
-  background-color: var(--router-tab-background);
+  background-color: css-var(--router-tab-background, css-var(--theme-background, $light-bg));
 }
 
 .router-tab__item.is-active + .router-tab__item {
-  border-left-color: var(--router-tab-border);
+  border-left-color: css-var(--router-tab-border, css-var(--theme-border, $light-border));
 }
