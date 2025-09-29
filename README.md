@@ -1,6 +1,6 @@
 # vue3-router-tab
 
-A Vue 3 tab-bar plugin that keeps multiple routes alive with transition support, context menus, and optional Pinia persistence.
+A Vue 3 tab-bar plugin that keeps multiple routes alive with transition support, context menus, and optional cookie-based persistence.
 
 ## Installation
 
@@ -14,90 +14,89 @@ pnpm add vue3-router-tab
 
 ```ts
 // main.ts
-import { createApp } from "vue";
-import App from "./App.vue";
-import router from "./router";
+import { createApp } from 'vue'
+import App from './App.vue'
+import router from './router'
 
-import RouterTab from "vue3-router-tab";
+import RouterTab from 'vue3-router-tab'
 
-const app = createApp(App);
-app.use(router);
-app.use(RouterTab);
-app.mount("#app");
+const app = createApp(App)
+app.use(router)
+app.use(RouterTab)
+app.mount('#app')
 ```
 
-The plugin automatically registers two components globally:
-
-- `<router-tab>` – the tab layout and router-view wrapper
-- `<router-tabs>` – a helper to persist tabs through Pinia/localStorage (optional)
+The plugin registers the `<router-tab>` component globally. It also exposes an optional `<router-tabs>` helper for advanced cookie options, but you rarely need it now that persistence can be enabled directly on the tab component.
 
 ## Basic usage
 
 ```vue
 <template>
-  <router-tab> </router-tab>
+  <router-tab cookie-key="app-tabs" />
 </template>
 ```
 
-Configure the routes with meta information to control titles, icons, and whether a tab can be closed:
+Configure route metadata to control tab labels, icons, and lifecycle behaviour:
 
 ```ts
-// router.ts
 const routes = [
   {
-    path: "/",
+    path: '/',
     component: Home,
     meta: {
-      title: "Home",
-      icon: "fa fa-home",
-      key: "fullPath",
+      title: 'Home',
+      icon: 'fa fa-home',
+      key: 'fullPath',
       closable: true,
       keepAlive: true,
     },
   },
   {
-    path: "/about",
+    path: '/about',
     component: About,
     meta: {
-      title: "About",
-      icon: "fa fa-info-circle",
+      title: 'About',
+      icon: 'fa fa-info-circle',
       keepAlive: false,
     },
   },
-];
+]
 ```
 
-`meta.key` accepts the built-in shortcuts `fullPath`, `path`, or `name`, or you can supply a custom function.
+`meta.key` accepts the shortcuts `fullPath`, `path`, or `name`, or you can supply your own function.
 
-## Pinia persistence
+## Cookie persistence
 
-`<router-tabs>` wraps `useRouterTabsPiniaPersistence` and synchronises the tab snapshot with Pinia/localStorage. You can configure it through props:
+`<router-tab cookie-key="…" />` is usually all you need. If you prefer fine grained control (custom expiry, same-site, etc.) you can still use the headless helper:
 
 ```vue
-<router-tabs
-  storage-key="app-tabs"      <!-- storage key name -->
-  :fallback-route="'/dashboard'" <!-- optional route used when no snapshot exists -->
-/>
+<router-tab>
+  <template #start>
+    <router-tabs
+      cookie-key="app-tabs"
+      :expires-in-days="14"
+      fallback-route="/dashboard"
+    />
+  </template>
+</router-tab>
 ```
 
-Prefer to use the composable directly?
+Want to wire it up yourself?
 
 ```ts
 <script setup lang="ts">
-import { useRouterTabsPiniaPersistence } from 'vue3-router-tab'
+import { useRouterTabsPersistence } from 'vue3-router-tab'
 
-useRouterTabsPiniaPersistence({
-  storageKey: 'app-tabs',
-  fallbackRoute: '/dashboard',
+useRouterTabsPersistence({
+  cookieKey: 'app-tabs',
+  expiresInDays: 30,
+  fallbackRoute: '/dashboard'
 })
 </script>
 ```
-
-You can provide your own Pinia store via the `store` option if you need to persist snapshots to a backend or IndexedDB.
+The composable also exposes `serialize` / `deserialize` options so you can encrypt or customise the cookie payload.
 
 ## Customising the context menu
-
-The context menu can be disabled or extended via the `contextmenu` prop:
 
 ```vue
 <router-tab
@@ -106,31 +105,29 @@ The context menu can be disabled or extended via the `contextmenu` prop:
     'close',
     { id: 'closeOthers', label: 'Close All Others' },
     {
-      id: 'my-action',
+      id: 'openWindow',
       label: 'Open in new window',
-      handler: ({ target }) => window.open(target.to, '_blank'),
-    },
+      handler: ({ target }) => window.open(target.to, '_blank')
+    }
   ]"
 />
 ```
 
-Pass `false` to hide the menu entirely.
+Pass `false` to disable the context menu entirely.
 
 ## Slots
 
-- `start` / `end` – areas on either side of the tab list (useful for toolbars and the Pinia helper)
-- `default` – the routed tab content (provided by `<router-tab>` automatically)
+- `start` / `end` – positioned on either side of the tab list (ideal for toolbars or the `<router-tabs>` helper).
+- `default` – routed content (rendered automatically by `<router-tab>`).
 
 ## Styling
 
-The package ships with its own SCSS/CSS bundle (imported automatically by the plugin). To customise, override the classes prefixed with `router-tab__` in your own CSS.
+The package ships with its own CSS bundle (imported automatically). Override the `router-tab__*` classes in your stylesheet to customise the appearance.
 
 ## Types
 
-The library ships TypeScript definitions for the tab records, menu configuration, Pinia options, and helper APIs. Import the types from the root module:
-
 ```ts
-import type { TabRecord, RouterTabsSnapshot } from "vue3-router-tab";
+import type { TabRecord, RouterTabsSnapshot, RouterTabsPersistenceOptions } from 'vue3-router-tab'
 ```
 
 ## License

@@ -42,7 +42,10 @@
     "router",
     "tabs",
     "tab",
-    "router-tab"
+    "router-tab",
+    "router-tabs",
+    "cookies",
+    "persistence"
   ],
   "license": "MIT",
   "homepage": "https://github.com/anilshr25/vue3-router-tab/#readme",

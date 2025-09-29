@@ -1,15 +1,15 @@
 import type { App, Plugin } from 'vue'
 import RouterTab from './components/RouterTab.vue'
-import RouterTabsPinia from './components/RouterTabsPinia.vue'
+import RouterTabsComponent from './components/RouterTabs.vue'
 import { routerTabsKey } from './constants'
 import useRouterTabs from './useRouterTabs'
-import { useRouterTabsPiniaPersistence } from './pinia'
+import { useRouterTabsPersistence } from './persistence'
 
 import type { RouterTabsContext } from './core/types'
 
-export type { TabRecord, TabInput, RouterTabsOptions, CloseTabOptions } from './core/types'
+export type { TabRecord, TabInput, RouterTabsOptions, CloseTabOptions, RouterTabsPersistenceOptions } from './core/types'
 
-export { routerTabsKey, useRouterTabs, useRouterTabsPiniaPersistence, RouterTabsPinia }
+export { routerTabsKey, useRouterTabs, useRouterTabsPersistence, RouterTab, RouterTabsComponent as RouterTabs }
 
 import "./scss/index.scss";
 
@@ -19,13 +19,13 @@ const plugin: Plugin = {
     ;(plugin as any)._installed = true
 
     const componentName = RouterTab.name || 'RouterTab'
-    const piniaComponentName = RouterTabsPinia.name || 'RouterTabs'
-    
-    app.component(componentName, RouterTab)
-    app.component(piniaComponentName, RouterTabsPinia)
+    const persistenceComponentName = RouterTabsComponent.name || 'RouterTabs'
 
-    if (piniaComponentName !== 'router-tabs') {
-      app.component('router-tabs', RouterTabsPinia)
+    app.component(componentName, RouterTab)
+    app.component(persistenceComponentName, RouterTabsComponent)
+
+    if (persistenceComponentName !== 'router-tabs') {
+      app.component('router-tabs', RouterTabsComponent)
     }
 
     Object.defineProperty(app.config.globalProperties, '$tabs', {
@@ -44,5 +44,3 @@ const plugin: Plugin = {
 }
 
 export default plugin
-
-export { RouterTab, RouterTabsPinia as RouterTabs }

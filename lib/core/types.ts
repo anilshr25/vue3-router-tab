@@ -113,3 +113,15 @@ export interface RouterTabsContext {
   snapshot: () => RouterTabsSnapshot
   hydrate: (snapshot: RouterTabsSnapshot) => Promise<void>
 }
+
+export interface RouterTabsPersistenceOptions {
+  cookieKey?: string
+  expiresInDays?: number
+  path?: string
+  domain?: string
+  secure?: boolean
+  sameSite?: 'lax' | 'strict' | 'none'
+  serialize?: (snapshot: RouterTabsSnapshot | null) => string
+  deserialize?: (value: string | null) => RouterTabsSnapshot | null
+  fallbackRoute?: RouteLocationRaw
+}

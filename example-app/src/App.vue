@@ -8,8 +8,7 @@
       <RouterLink to="/contact">Contact</RouterLink>
     </nav>
 
-    <router-tab>
-    </router-tab>
+    <router-tab cookie-key="example-tabs" />
   </div>
 </template>
 
