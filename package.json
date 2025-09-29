@@ -12,10 +12,12 @@
   "exports": {
     ".": {
       "types": "./index.d.ts",
+      "default": "./dist/vue3-router-tab.es.js",
       "import": "./dist/vue3-router-tab.es.js",
       "require": "./dist/vue3-router-tab.cjs.js"
     },
-    "./style": "./dist/vue3-router-tab.css"
+    "./style": "./dist/vue3-router-tab.css",
+    "./package.json": "./package.json"
   },
   "scripts": {
     "build": "vite build"
@@ -40,9 +42,6 @@
     "router",
     "tabs",
     "tab",
-    "pinia",
-    "persistence",
-    "tab persistence",
     "router-tab"
   ],
   "license": "MIT",
