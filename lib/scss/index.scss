@@ -1,36 +1,57 @@
 @use "sass:math";
 @use "sass:color";
-@use "variables" as *;
 
-// Theme Setup
+$default-primary: #0f172a;
+$default-border: #e2e8f0;
+$default-text: #1e293b;
+$default-bg: #f8fafc;
+$default-dark-bg: #0f172a;
+$default-dark-text: #e2e8f0;
+$default-dark-border: rgba(148, 163, 184, 0.35);
+
+$font-size: 14px;
+$tab-trans: all 0.3s ease-in-out;
+$hd-height: 40px;
+$tab-padding: 20px;
+$close-icon-margin: 4px;
+$close-icon-size: 13px;
+
+:root {
+  --theme-primary: #{$default-primary};
+  --router-tab-primary: var(--theme-primary);
+  --router-tab-background: #{$default-bg};
+  --router-tab-foreground: #{$default-text};
+  --router-tab-border: #{$default-border};
+  --router-tab-header-bg: #{$default-bg};
+  color-scheme: light;
+}
+
 :root[data-theme="light"] {
   color-scheme: light;
-  --router-tab-background: #{$router-tab-bg-light};
-  --router-tab-foreground: #{$router-tab-text-light};
-  --router-tab-border: #{$router-tab-border-light};
-  --router-tab-header-bg: #{$router-tab-bg-light};
+  --router-tab-background: #{$default-bg};
+  --router-tab-foreground: #{$default-text};
+  --router-tab-border: #{$default-border};
+  --router-tab-header-bg: #{$default-bg};
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --router-tab-active-border: #ffff;
-  --router-tab-background: #{$router-tab-bg-dark};
-  --router-tab-foreground: #{$router-tab-text-dark};
-  --router-tab-border: #{$router-tab-border-dark};
-  --router-tab-header-bg: #{$router-tab-bg-dark};
+  --router-tab-background: #{$default-dark-bg};
+  --router-tab-foreground: #{$default-dark-text};
+  --router-tab-border: #{$default-dark-border};
+  --router-tab-header-bg: #{$default-dark-bg};
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     color-scheme: dark;
-    --router-tab-background: #{$router-tab-bg-dark};
-    --router-tab-foreground: #{$router-tab-text-dark};
-    --router-tab-border: #{$router-tab-border-dark};
-    --router-tab-header-bg: #{$router-tab-bg-dark};
+    --router-tab-background: #{$default-dark-bg};
+    --router-tab-foreground: #{$default-dark-text};
+    --router-tab-border: #{$default-dark-border};
+    --router-tab-header-bg: #{$default-dark-bg};
   }
 }
 
-// Main Component Styles
 .router-tab {
   display: flex;
   flex-direction: column;
@@ -44,22 +65,16 @@
     display: flex;
     flex: none;
     box-sizing: border-box;
-    height: var(--router-tab-header-height, $router-tab-header-height);
+    height: $hd-height;
     background-color: var(--router-tab-header-bg);
-    transition: $router-tab-transition-fast;
-    border-bottom: 1px solid var(--router-tab-border);
-  }
-
-  &__slot-start,
-  &__slot-end {
-    display: flex;
-    align-items: center;
+    border-bottom: 1px solid var(--router-tab-border); // FIXED: Added border
+    transition: all 0.2s ease-in-out;
   }
 
   &__scroll {
     position: relative;
     flex: 1 1 0px;
-    height: var(--router-tab-header-height, $router-tab-header-height);
+    height: $hd-height;
     overflow: hidden;
 
     &-container {
@@ -123,15 +138,19 @@
     display: flex;
     flex: none;
     align-items: center;
-    padding: 0 var(--router-tab-padding, $router-tab-padding);
+    padding: 0 $tab-padding;
     color: inherit;
-    font-size: var(--router-tab-font-size, $router-tab-font-size);
+    font-size: $font-size;
     transform-origin: left bottom;
     cursor: pointer;
-    transition: var(--router-tab-transition, $router-tab-transition);
+    transition: $tab-trans;
     user-select: none;
     background-color: transparent;
+    
+    // FIXED: Added proper borders
     border-right: 1px solid var(--router-tab-border);
+    border-top: 1px solid transparent;
+    border-bottom: 2px solid transparent;
 
     &:first-child {
       border-left: 1px solid var(--router-tab-border);
@@ -141,59 +160,43 @@
       color: var(--router-tab-primary);
     }
 
-    // Drag and drop states
+    // NEW: Drag states
     &.is-dragging {
-      opacity: $router-tab-drag-opacity;
-      cursor: $router-tab-drag-cursor;
+      opacity: 0.5;
+      cursor: move;
     }
 
     &.is-drag-over {
-      background: $router-tab-drag-over-bg;
-      transition: background 0.15s ease;
-
-      &::before {
-        content: "";
-        position: absolute;
-        left: -2px;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: var(--router-tab-primary);
-      }
-    }
-
-    &[draggable="true"] {
-      cursor: $router-tab-drag-cursor;
+      background: color-mix(in srgb, var(--router-tab-primary) 10%, transparent 90%);
+      border-left: 2px solid var(--router-tab-primary);
+      transition: background 0.15s ease, border-left 0.15s ease;
     }
 
     &-title {
-      min-width: $router-tab-title-min-width;
-      max-width: $router-tab-title-max-width;
+      min-width: 30px;
+      max-width: 120px;
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
     }
 
     &-icon {
-      margin-right: $router-tab-icon-margin;
-      font-size: $router-tab-icon-size;
+      margin-right: 5px;
+      font-size: 16px;
     }
 
     &:hover,
     &.is-active {
-      color: var(--router-tab-active-border);
+      color: var(--router-tab-primary);
+      background-color: color-mix(in srgb, var(--router-tab-primary) 5%, transparent 95%);
 
       &.is-closable {
-        padding: 0
-          calc(
-            var(--router-tab-padding, #{$router-tab-padding}) -
-              (#{$router-tab-close-icon-size} + #{$router-tab-close-icon-margin}) / 2
-          );
+        padding: 0 ($tab-padding - math.div($close-icon-size + $close-icon-margin, 2));
       }
 
       .router-tab__item-close {
-        width: $router-tab-close-icon-size;
-        margin-left: $router-tab-close-icon-margin;
+        width: $close-icon-size;
+        margin-left: $close-icon-margin;
 
         &::before,
         &::after {
@@ -202,11 +205,15 @@
       }
     }
 
+    // FIXED: Enhanced active state
     &.is-active {
+      border-bottom: 2px solid var(--router-tab-primary);
       background-color: var(--router-tab-background);
-      color: var(--router-tab-active-border);
-      border-bottom: 2px solid var(--router-tab-active-border);
-      font-weight: 510;
+      font-weight: 500;
+      
+      &:not(:first-child) {
+        border-left-color: var(--router-tab-border);
+      }
     }
 
     &-close {
@@ -215,12 +222,12 @@
       position: relative;
       display: block;
       width: 0;
-      height: $router-tab-close-icon-size;
+      height: $close-icon-size;
       margin-left: 0;
       overflow: hidden;
       border-radius: 50%;
       cursor: pointer;
-      transition: var(--router-tab-transition, $router-tab-transition);
+      transition: $tab-trans;
       background: transparent;
       border: none;
 
@@ -247,7 +254,7 @@
       }
 
       &:hover {
-        background-color: color-mix(in srgb, var(--router-tab-primary) 40%, transparent 60%);
+        background-color: color-mix(in srgb, var(--router-tab-primary) 40%, #ffffff 60%);
 
         &::before,
         &::after {
@@ -257,31 +264,32 @@
     }
   }
 
+  // FIXED: Improved context menu z-index
   &__contextmenu {
     position: fixed;
-    z-index: 1000;
-    min-width: $router-tab-contextmenu-min-width;
-    padding: $router-tab-contextmenu-padding;
-    font-size: var(--router-tab-font-size, $router-tab-font-size);
+    z-index: 9999; // Increased from 1000
+    min-width: 140px;
+    padding: 8px 0;
+    font-size: $font-size;
     background: var(--router-tab-background);
     border: 1px solid var(--router-tab-border);
-    box-shadow: $router-tab-contextmenu-shadow;
-    border-radius: $router-tab-contextmenu-border-radius;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    border-radius: 8px;
 
-    &-item {
+    a,
+    button {
       display: block;
       width: 100%;
-      padding: $router-tab-contextmenu-item-padding;
-      line-height: $router-tab-contextmenu-item-height;
+      padding: 0 16px;
+      line-height: 30px;
       text-align: left;
-      text-decoration: none;
       background: transparent;
       border: none;
       color: inherit;
       cursor: pointer;
       font: inherit;
+      text-decoration: none;
       transition: background-color 0.2s ease-in-out;
-      border-radius: calc(#{$router-tab-contextmenu-border-radius} - 4px);
 
       &[aria-disabled="true"] {
         color: rgba(148, 163, 184, 0.6);
@@ -289,10 +297,11 @@
         cursor: not-allowed;
       }
 
-      &:hover:not([aria-disabled="true"]),
-      &:focus-visible {
-        background: color-mix(in srgb, var(--router-tab-primary) 10%, transparent 90%);
+      &:not([aria-disabled="true"]):hover,
+      &:not([aria-disabled="true"]):focus-visible {
+        background: color-mix(in srgb, var(--router-tab-primary) 15%, transparent 85%);
         color: var(--router-tab-primary);
+        outline: none;
       }
     }
   }
@@ -301,47 +310,32 @@
     position: relative;
     flex: 1 1 auto;
     background-color: var(--router-tab-background);
-    overflow: hidden;
+    border: 1px solid var(--router-tab-border);
+    border-top: none; // FIXED: Avoid double border with header
   }
 }
-.router-tab__item.is-active:after {
-  display: none !important;
+
+// FIXED: Proper adjacent tab borders
+.router-tab__item {
+  + .router-tab__item {
+    border-left-color: var(--router-tab-border);
+  }
+
+  &.is-active + .router-tab__item {
+    border-left-color: var(--router-tab-border);
+  }
 }
 
-.router-tab__item.is-active + .router-tab__item {
-  border-left-color: transparent;
+// NEW: Smooth drag animations
+@keyframes router-tab-drag-hint {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
 }
 
-// Transition animations
-.router-tab-zoom-enter-active,
-.router-tab-zoom-leave-active {
-  transition: all 0.3s ease;
-}
-
-.router-tab-zoom-enter-from,
-.router-tab-zoom-leave-to {
-  opacity: 0;
-  transform: scale(0.8);
-}
-
-.router-tab-swap-enter-active,
-.router-tab-swap-leave-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
-}
-
-.router-tab-swap-enter-from {
-  opacity: 0;
-  transform: translateX(10px);
-}
-
-.router-tab-swap-leave-to {
-  opacity: 0;
-  transform: translateX(-10px);
-}
-
-.router-tab-page {
-  width: 100%;
-  height: 100%;
+.router-tab__item.is-dragging {
+  animation: router-tab-drag-hint 0.3s ease-in-out;
 }

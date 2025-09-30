@@ -1,4 +1,4 @@
-import { onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 import { useRouterTabs } from './useRouterTabs'
 import type { RouterTabsSnapshot } from './core/types'
@@ -108,6 +108,14 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
         try {
           hydrating.value = true
           await ctrl.hydrate(initialSnapshot)
+          if (initialSnapshot.active) {
+            await nextTick()
+            const activeTab = ctrl.tabs.find(t => t.to === initialSnapshot.active)
+            if (activeTab) {
+              ctrl.activeId.value = activeTab.id
+              ctrl.current.value = activeTab
+            }
+          }
         } finally {
           hydrating.value = false
         }

@@ -1,7 +1,7 @@
 const STYLE_KEY = 'tab-theme-style'
 const PRIMARY_KEY = 'tab-theme-primary-color'
 const DEFAULT_STYLE: 'light' | 'dark' | 'system' = 'system'
-const DEFAULT_PRIMARY = '#635bff'
+const DEFAULT_PRIMARY = '#0f172a'
 const MEDIA_QUERY = '(prefers-color-scheme: dark)'
 
 let mediaListener: ((event: MediaQueryListEvent) => void) | null = null

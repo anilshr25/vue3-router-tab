@@ -15,7 +15,7 @@ const setTabThemeStyle = () => {
     () => themeStyle.current.value,
     () => {
       setRouterTabsTheme(window.localStorage.getItem("tab-theme-style") ?? "system");
-      setRouterTabsPrimary(window.localStorage.getItem("tab-theme-primary-color") ?? "#635bff");
+      setRouterTabsPrimary(window.localStorage.getItem("tab-theme-primary-color") ?? "#0f172a");
     },
     { immediate: true }
   );

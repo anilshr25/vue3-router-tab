@@ -82,9 +82,10 @@ const menuItems: MenuItem[] = [
 ]
 
 const toggleTheme = () => {
+  console.log('Toggle theme clicked', theme.global.current.value.dark )
   theme.change(theme.global.current.value.dark ? 'light' : 'dark')
-  window.localStorage.setItem('tab-theme-style', theme.global.current.value.dark ? 'light' : 'dark')
-  window.localStorage.setItem('tab-theme-primary-color', theme.global.current.value.dark ? '#ffffff' : '#635bff')
+  window.localStorage.setItem('tab-theme-style', theme.global.current.value.dark ? 'dark' : 'light')
+  window.localStorage.setItem('tab-theme-primary-color', theme.global.current.value.dark ? '#ffffff' : '#0f172a')
 }
 
 const handleLogout = () => {

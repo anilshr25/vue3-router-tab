@@ -115,7 +115,7 @@ The composable also exposes `serialize` / `deserialize` options so you can encry
 The plugin initialises a lightweight theme layer on install:
 
 - Reads `tab-theme-style` (`'light'`, `'dark'`, or `'system'`; defaults to `'system'`).
-- Reads `tab-theme-primary-color` (defaults to `#635bff`).
+- Reads `tab-theme-primary-color` (defaults to `#0f172a`).
 - Applies the choice via `data-theme` and `--theme-primary` CSS variables, keeping “system” in sync with OS changes.
 
 Override the theme at runtime:
