@@ -1,7 +1,6 @@
 const STYLE_KEY = 'tab-theme-style'
 const PRIMARY_KEY = 'tab-theme-primary-color'
 const DEFAULT_STYLE: 'light' | 'dark' | 'system' = 'system'
-const DEFAULT_PRIMARY = '#0f172a'
 const MEDIA_QUERY = '(prefers-color-scheme: dark)'
 
 let mediaListener: ((event: MediaQueryListEvent) => void) | null = null
@@ -12,11 +11,86 @@ export interface RouterTabsThemeOptions {
   defaultStyle?: 'light' | 'dark' | 'system'
   defaultPrimary?: string
 }
+export interface ColorStyle {
+ // Core colors
+  primary: string;
+  background: string;
+  text: string;
+  border: string;
+  
+  // Interactive states
+  activeBackground: string;
+  activeText: string;
+  activeBorder: string;
+  
+  // Header specific
+  headerBackground: string;
+  
+  // Button specific
+  buttonBackground: string;
+  buttonColor: string;
+  activeButtonBackground: string;
+  activeButtonColor: string;
+  
+  // Icon specific
+  iconColor: string;
+}
 
-function applyPrimary(color: string) {
+const defaultColors: ColorStyle = {
+  primary: "#034960",
+  background: "#ffffff",
+  text: "#1e293b",
+  border: "#e2e8f0",
+  
+  activeBackground: "#034960",
+  activeText: "#ffffff",
+  activeBorder: "#034960",
+  
+  headerBackground: "#ffff",
+  
+  buttonBackground: "#f8fafc",
+  buttonColor: "#034960",
+  activeButtonBackground: "#034960",
+  activeButtonColor: "#ffffff",
+  
+  iconColor: "#475569",
+}
+
+const defaultDarkColor: ColorStyle = {
+  primary: "#38bdf8",
+  background: "#0f172a",
+  text: "#f1f5f9",
+  border: "#334155",
+  
+  activeBackground: "#1e293b",
+  activeText: "#38bdf8",
+  activeBorder: "#38bdf8",
+  
+  headerBackground: "#0c4a6e", // Darker shade of primary
+  
+  buttonBackground: "#1e293b",
+  buttonColor: "#f1f5f9",
+  activeButtonBackground: "#38bdf8",
+  activeButtonColor: "#0f172a",
+  
+  iconColor: "#cbd5e1",
+}
+
+function applyPrimary(color: ColorStyle) {
   if (typeof document === 'undefined') return
-  document.documentElement.style.setProperty('--theme-primary', color)
-  document.documentElement.style.setProperty('--router-tab-primary', color)
+  console.log('applyPrimary', color)
+  document.documentElement.style.setProperty('--router-tab-primary', color.primary ?? defaultColors.primary)
+  document.documentElement.style.setProperty('--router-tab-header-bg', color.headerBackground ?? defaultColors.headerBackground)
+  document.documentElement.style.setProperty('--router-tab-background', color.background ?? defaultColors.background)
+  document.documentElement.style.setProperty('--router-tab-active-background', color.activeBackground ?? defaultColors.activeBackground)
+  document.documentElement.style.setProperty('--router-tab-text', color.text ?? defaultColors.text)
+  document.documentElement.style.setProperty('--router-tab-active-text', color.activeText ?? defaultColors.activeText)
+  document.documentElement.style.setProperty('--router-tab-border', color.border ?? defaultColors.border)
+  document.documentElement.style.setProperty('--router-tab-active-border', color.activeBorder ?? defaultColors.activeBorder)
+  document.documentElement.style.setProperty('--router-tab-button-color', color.buttonColor ?? defaultColors.buttonColor)
+  document.documentElement.style.setProperty('--router-tab-active-button-color', color.activeButtonColor ?? defaultColors.activeButtonColor)
+  document.documentElement.style.setProperty('--router-tab-button-background', color.buttonBackground ?? defaultColors.buttonBackground)
+  document.documentElement.style.setProperty('--router-tab-active-button-background', color.activeButtonBackground ?? defaultColors.activeButtonBackground)
 }
 
 function applyStyle(style: 'light' | 'dark' | 'system') {
@@ -48,16 +122,17 @@ export function initRouterTabsTheme(options: RouterTabsThemeOptions = {}) {
 
   const {
     styleKey = STYLE_KEY,
-    primaryKey = PRIMARY_KEY,
     defaultStyle = DEFAULT_STYLE,
-    defaultPrimary = DEFAULT_PRIMARY
   } = options
 
   const storedStyle = (window.localStorage.getItem(styleKey) as 'light' | 'dark' | 'system' | null) ?? defaultStyle
-  const storedPrimary = window.localStorage.getItem(primaryKey) ?? defaultPrimary
 
   applyStyle(storedStyle)
-  applyPrimary(storedPrimary)
+  if (storedStyle === 'dark') {
+    applyPrimary(defaultDarkColor)
+  } else {
+    applyPrimary(defaultColors)
+  }
 }
 
 export function setRouterTabsTheme(style: 'light' | 'dark' | 'system', options?: RouterTabsThemeOptions) {
@@ -67,9 +142,9 @@ export function setRouterTabsTheme(style: 'light' | 'dark' | 'system', options?:
   applyStyle(style)
 }
 
-export function setRouterTabsPrimary(color: string, options?: RouterTabsThemeOptions) {
+export function setRouterTabsPrimary(color: ColorStyle, options?: RouterTabsThemeOptions) {
   if (typeof window === 'undefined') return
   const key = options?.primaryKey ?? PRIMARY_KEY
-  window.localStorage.setItem(key, color)
+  window.localStorage.setItem(key, JSON.stringify(color))
   applyPrimary(color)
 }

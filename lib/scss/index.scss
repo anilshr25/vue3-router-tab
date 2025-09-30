@@ -1,80 +1,47 @@
 @use "sass:math";
 @use "sass:color";
+@use "variables" as *;
 
-$default-primary: #0f172a;
-$default-border: #e2e8f0;
-$default-text: #1e293b;
-$default-bg: #f8fafc;
-$default-dark-bg: #0f172a;
-$default-dark-text: #e2e8f0;
-$default-dark-border: rgba(148, 163, 184, 0.35);
-
-$font-size: 14px;
-$tab-trans: all 0.3s ease-in-out;
-$hd-height: 40px;
-$tab-padding: 20px;
-$close-icon-margin: 4px;
-$close-icon-size: 13px;
+// =============================================================================
+// CSS Custom Properties & Theme System
+// =============================================================================
 
 :root {
-  --theme-primary: #{$default-primary};
-  --router-tab-primary: var(--theme-primary);
-  --router-tab-background: #{$default-bg};
-  --router-tab-foreground: #{$default-text};
-  --router-tab-border: #{$default-border};
-  --router-tab-header-bg: #{$default-bg};
-  color-scheme: light;
+  
+  // Layout variables
+  --router-tab-header-height: #{$router-tab-header-height};
+  --router-tab-padding: #{$router-tab-padding};
+  --router-tab-font-size: #{$router-tab-font-size};
 }
 
-:root[data-theme="light"] {
-  color-scheme: light;
-  --router-tab-background: #{$default-bg};
-  --router-tab-foreground: #{$default-text};
-  --router-tab-border: #{$default-border};
-  --router-tab-header-bg: #{$default-bg};
-}
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --router-tab-background: #{$default-dark-bg};
-  --router-tab-foreground: #{$default-dark-text};
-  --router-tab-border: #{$default-dark-border};
-  --router-tab-header-bg: #{$default-dark-bg};
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    color-scheme: dark;
-    --router-tab-background: #{$default-dark-bg};
-    --router-tab-foreground: #{$default-dark-text};
-    --router-tab-border: #{$default-dark-border};
-    --router-tab-header-bg: #{$default-dark-bg};
-  }
-}
+// =============================================================================
+// Main Component Styles
+// =============================================================================
 
 .router-tab {
   display: flex;
   flex-direction: column;
   min-height: 300px;
   background-color: var(--router-tab-background);
-  color: var(--router-tab-foreground);
+  color: var(--router-tab-text);
 
   &__header {
     position: relative;
-    z-index: 9;
+    z-index: 10;
     display: flex;
     flex: none;
+    align-items: center;
     box-sizing: border-box;
-    height: $hd-height;
+    height: var(--router-tab-header-height);
     background-color: var(--router-tab-header-bg);
-    border-bottom: 1px solid var(--router-tab-border); // FIXED: Added border
-    transition: all 0.2s ease-in-out;
+    border-bottom: 1px solid var(--router-tab-border);
+    transition: $router-tab-transition-fast;
   }
 
   &__scroll {
     position: relative;
     flex: 1 1 0px;
-    height: $hd-height;
+    height: 100%;
     overflow: hidden;
 
     &-container {
@@ -85,40 +52,12 @@ $close-icon-size: 13px;
       &.is-mobile {
         overflow-x: auto;
         overflow-y: hidden;
-      }
-    }
-  }
+        scrollbar-width: none;
+        -ms-overflow-style: none;
 
-  &__scrollbar {
-    $h: 3px;
-
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    height: $h;
-    background-color: rgba(0, 0, 0, 0.1);
-    border-radius: $h;
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-
-    .router-tab__scroll:hover &,
-    &.is-dragging {
-      opacity: 1;
-    }
-
-    &-thumb {
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.1);
-      border-radius: $h;
-      transition: background-color 0.3s ease-in-out;
-
-      &:hover,
-      .router-tab__scrollbar.is-dragging & {
-        background-color: rgba(0, 0, 0, 0.2);
+        &::-webkit-scrollbar {
+          display: none;
+        }
       }
     }
   }
@@ -138,170 +77,120 @@ $close-icon-size: 13px;
     display: flex;
     flex: none;
     align-items: center;
-    padding: 0 $tab-padding;
-    color: inherit;
-    font-size: $font-size;
-    transform-origin: left bottom;
-    cursor: pointer;
-    transition: $tab-trans;
-    user-select: none;
+    gap: 0.5rem;
+    padding: 0 var(--router-tab-padding);
+    color: var(--router-tab-text);
+    font-size: var(--router-tab-font-size);
     background-color: transparent;
-    
-    // FIXED: Added proper borders
+    border: none;
     border-right: 1px solid var(--router-tab-border);
-    border-top: 1px solid transparent;
-    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    user-select: none;
+    transition: var(--router-tab-transition);
 
     &:first-child {
       border-left: 1px solid var(--router-tab-border);
     }
 
-    &.is-contextmenu {
+    &:hover {
+      background-color: color-mix(in srgb, var(--router-tab-primary) 4%, transparent);
       color: var(--router-tab-primary);
     }
 
-    // NEW: Drag states
-    &.is-dragging {
-      opacity: 0.5;
-      cursor: move;
+    &.is-active {
+      background-color: var(--router-tab-active-background);
+      color: var(--router-tab-active-text);
+      font-weight: 510;
+
+      &::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: var(--router-tab-active-border);
+      }
+
+      & + .router-tab__item {
+        border-left-color: transparent;
+      }
     }
 
-    &.is-drag-over {
-      background: color-mix(in srgb, var(--router-tab-primary) 10%, transparent 90%);
-      border-left: 2px solid var(--router-tab-primary);
-      transition: background 0.15s ease, border-left 0.15s ease;
+    // Icon styling using the dedicated color
+    &-icon {
+      flex-shrink: 0;
+      font-size: $router-tab-icon-size;
+      color: var(--router-tab-icon-color);
+      
+      .router-tab__item.is-active & {
+        color: var(--router-tab-active-text);
+      }
+      
+      .router-tab__item:hover & {
+        color: currentColor;
+      }
     }
 
     &-title {
-      min-width: 30px;
-      max-width: 120px;
+      min-width: $router-tab-title-min-width;
+      max-width: $router-tab-title-max-width;
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
     }
 
-    &-icon {
-      margin-right: 5px;
-      font-size: 16px;
-    }
-
-    &:hover,
-    &.is-active {
-      color: var(--router-tab-primary);
-      background-color: color-mix(in srgb, var(--router-tab-primary) 5%, transparent 95%);
-
-      &.is-closable {
-        padding: 0 ($tab-padding - math.div($close-icon-size + $close-icon-margin, 2));
-      }
-
-      .router-tab__item-close {
-        width: $close-icon-size;
-        margin-left: $close-icon-margin;
-
-        &::before,
-        &::after {
-          background-color: currentColor;
-        }
-      }
-    }
-
-    // FIXED: Enhanced active state
-    &.is-active {
-      border-bottom: 2px solid var(--router-tab-primary);
-      background-color: var(--router-tab-background);
-      font-weight: 500;
-      
-      &:not(:first-child) {
-        border-left-color: var(--router-tab-border);
-      }
-    }
-
+    // Close button using button colors
     &-close {
-      $inner: 8px;
-
+      $close-size: $router-tab-close-icon-size;
+      $inner-line: 8px;
+      
       position: relative;
       display: block;
       width: 0;
-      height: $close-icon-size;
-      margin-left: 0;
+      height: $close-size;
+      flex-shrink: 0;
       overflow: hidden;
-      border-radius: 50%;
-      cursor: pointer;
-      transition: $tab-trans;
-      background: transparent;
       border: none;
+      border-radius: 50%;
+      background: var(--router-tab-button-bg);
+      color: var(--router-tab-button-color);
+      cursor: pointer;
+      transition: var(--router-tab-transition);
 
       &::before,
       &::after {
         position: absolute;
-        top: 6px;
+        top: 50%;
         left: 50%;
         display: block;
-        width: $inner;
+        width: $inner-line;
         height: 1px;
-        margin-left: math.div(-$inner, 2);
+        margin-left: math.div(-$inner-line, 2);
         background-color: currentColor;
         transition: background-color 0.2s ease-in-out;
         content: "";
       }
 
-      &::before {
-        transform: rotate(-45deg);
-      }
-
-      &::after {
-        transform: rotate(45deg);
-      }
+      &::before { transform: translateY(-50%) rotate(-45deg); }
+      &::after { transform: translateY(-50%) rotate(45deg); }
 
       &:hover {
-        background-color: color-mix(in srgb, var(--router-tab-primary) 40%, #ffffff 60%);
-
-        &::before,
-        &::after {
-          background-color: #fff;
-        }
+        background: var(--router-tab-active-button-bg);
+        color: var(--router-tab-active-button-color);
       }
     }
-  }
 
-  // FIXED: Improved context menu z-index
-  &__contextmenu {
-    position: fixed;
-    z-index: 9999; // Increased from 1000
-    min-width: 140px;
-    padding: 8px 0;
-    font-size: $font-size;
-    background: var(--router-tab-background);
-    border: 1px solid var(--router-tab-border);
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
-    border-radius: 8px;
-
-    a,
-    button {
-      display: block;
-      width: 100%;
-      padding: 0 16px;
-      line-height: 30px;
-      text-align: left;
-      background: transparent;
-      border: none;
-      color: inherit;
-      cursor: pointer;
-      font: inherit;
-      text-decoration: none;
-      transition: background-color 0.2s ease-in-out;
-
-      &[aria-disabled="true"] {
-        color: rgba(148, 163, 184, 0.6);
-        pointer-events: none;
-        cursor: not-allowed;
+    // Show close button on hover/active
+    &:hover,
+    &.is-active {
+      &.is-closable {
+        padding-right: calc(var(--router-tab-padding) - #{($router-tab-close-icon-size + $router-tab-close-icon-margin) * 0.5});
       }
 
-      &:not([aria-disabled="true"]):hover,
-      &:not([aria-disabled="true"]):focus-visible {
-        background: color-mix(in srgb, var(--router-tab-primary) 15%, transparent 85%);
-        color: var(--router-tab-primary);
-        outline: none;
+      .router-tab__item-close {
+        width: $router-tab-close-icon-size;
+        margin-left: $router-tab-close-icon-margin;
       }
     }
   }
@@ -310,32 +199,47 @@ $close-icon-size: 13px;
     position: relative;
     flex: 1 1 auto;
     background-color: var(--router-tab-background);
-    border: 1px solid var(--router-tab-border);
-    border-top: none; // FIXED: Avoid double border with header
+    overflow: hidden;
   }
 }
 
-// FIXED: Proper adjacent tab borders
-.router-tab__item {
-  + .router-tab__item {
-    border-left-color: var(--router-tab-border);
-  }
+// Context Menu using button colors
+.router-tab__contextmenu {
+  position: fixed;
+  z-index: 1000;
+  min-width: $router-tab-contextmenu-min-width;
+  padding: $router-tab-contextmenu-padding;
+  font-size: var(--router-tab-font-size);
+  background: var(--router-tab-background);
+  border: 1px solid var(--router-tab-border);
+  border-radius: $router-tab-contextmenu-border-radius;
+  box-shadow: $router-tab-contextmenu-shadow;
 
-  &.is-active + .router-tab__item {
-    border-left-color: var(--router-tab-border);
-  }
-}
+  &-item {
+    display: block;
+    width: 100%;
+    padding: $router-tab-contextmenu-item-padding;
+    line-height: $router-tab-contextmenu-item-height;
+    text-align: left;
+    text-decoration: none;
+    background: var(--router-tab-button-bg);
+    border: none;
+    color: var(--router-tab-button-color);
+    cursor: pointer;
+    font: inherit;
+    border-radius: calc(#{$router-tab-contextmenu-border-radius} - 4px);
+    transition: all 0.2s ease-in-out;
 
-// NEW: Smooth drag animations
-@keyframes router-tab-drag-hint {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-2px);
-  }
-}
+    &[aria-disabled="true"] {
+      color: color-mix(in srgb, var(--router-tab-text) 40%);
+      pointer-events: none;
+      cursor: not-allowed;
+    }
 
-.router-tab__item.is-dragging {
-  animation: router-tab-drag-hint 0.3s ease-in-out;
+    &:hover:not([aria-disabled="true"]),
+    &:focus-visible {
+      background: var(--router-tab-active-button-bg);
+      color: var(--router-tab-active-button-color);
+    }
+  }
 }
