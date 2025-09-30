@@ -128,6 +128,7 @@ export function initRouterTabsTheme(options: RouterTabsThemeOptions = {}) {
   const storedStyle = (window.localStorage.getItem(styleKey) as 'light' | 'dark' | 'system' | null) ?? defaultStyle
 
   applyStyle(storedStyle)
+  
   if (storedStyle === 'dark') {
     applyPrimary(defaultDarkColor)
   } else {
