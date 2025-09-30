@@ -4,19 +4,43 @@ import RouterTabsComponent from './components/RouterTabs.vue'
 import { routerTabsKey } from './constants'
 import useRouterTabs from './useRouterTabs'
 import { useRouterTabsPersistence } from './persistence'
+import {
+  initRouterTabsTheme,
+  setRouterTabsPrimary,
+  setRouterTabsTheme
+} from './theme'
 
 import type { RouterTabsContext } from './core/types'
 
-export type { TabRecord, TabInput, RouterTabsOptions, CloseTabOptions, RouterTabsPersistenceOptions } from './core/types'
+export type {
+  TabRecord,
+  TabInput,
+  RouterTabsOptions,
+  CloseTabOptions,
+  RouterTabsPersistenceOptions
+} from './core/types'
 
-export { routerTabsKey, useRouterTabs, useRouterTabsPersistence, RouterTab, RouterTabsComponent as RouterTabs }
+export type { RouterTabsThemeOptions } from './theme'
+
+export {
+  routerTabsKey,
+  useRouterTabs,
+  useRouterTabsPersistence,
+  RouterTab,
+  RouterTabsComponent as RouterTabs,
+  initRouterTabsTheme,
+  setRouterTabsTheme,
+  setRouterTabsPrimary
+}
 
 import "./scss/index.scss";
 
 const plugin: Plugin = {
   install(app: App) {
     if ((plugin as any)._installed) return
-    ;(plugin as any)._installed = true
+      ; (plugin as any)._installed = true
+
+    initRouterTabsTheme()
 
     const componentName = RouterTab.name || 'RouterTab'
     const persistenceComponentName = RouterTabsComponent.name || 'RouterTabs'

@@ -12,21 +12,28 @@
           v-bind="tabTransitionProps"
         >
           <li
-            v-for="tab in tabs"
+            v-for="(tab, index) in tabs"
             :key="tab.id"
             :class="buildTabClass(tab)"
+            :data-title="getTabTitle(tab)"
+            :draggable="sortable"
             @click="activate(tab)"
             @auxclick.middle.prevent="close(tab)"
             @contextmenu.prevent="showContextMenu(tab, $event)"
+            @dragstart="onDragStart(tab, index, $event)"
+            @dragover="onDragOver(index, $event)"
+            @dragenter="onDragEnter(index)"
+            @dragleave="onDragLeave"
+            @drop="onDrop(index, $event)"
+            @dragend="onDragEnd"
           >
-            <span class="router-tab__item-title" :title="tabTitle(tab)">
+            <span class="router-tab__item-title" :title="getTabTitle(tab)">
               <i v-if="tab.icon" :class="['router-tab__item-icon', tab.icon]" />
-              {{ tabTitle(tab) }}
+              {{ getTabTitle(tab) }}
             </span>
             <a
               v-if="isClosable(tab)"
               class="router-tab__item-close"
-              type="button"
               @click.stop="close(tab)"
             />
           </li>
@@ -39,36 +46,41 @@
     </header>
 
     <div class="router-tab__container">
-      <RouterView v-slot="{ Component, route }">
-        <transition
-          v-bind="pageTransitionProps"
-          appear
-        >
-          <KeepAlive
-            v-if="controller.options.keepAlive"
-            :include="includeKeys"
-            :max="controller.options.maxAlive || undefined"
+      <RouterView v-slot="routerSlot">
+        <template v-if="hasCustomSlot">
+          <slot v-bind="{ ...routerSlot, controller }" />
+        </template>
+        <template v-else>
+          <transition
+            v-bind="pageTransitionProps"
+            appear
+          >
+            <KeepAlive
+              v-if="controller.options.keepAlive"
+              :include="includeKeys"
+              :max="controller.options.maxAlive || undefined"
+            >
+              <component
+                v-if="!isRefreshing(routerSlot.route)"
+                :is="routerSlot.Component"
+                :key="controller.getRouteKey(routerSlot.route)"
+                class="router-tab-page"
+              />
+            </KeepAlive>
+          </transition>
+
+          <transition
+            v-bind="pageTransitionProps"
+            appear
           >
             <component
-              v-if="!isRefreshing(route)"
-              :is="Component"
-              :key="controller.getRouteKey(route)"
+              v-if="!controller.options.keepAlive || isRefreshing(routerSlot.route)"
+              :is="routerSlot.Component"
+              :key="controller.getRouteKey(routerSlot.route) + (isRefreshing(routerSlot.route) ? '-refresh' : '')"
               class="router-tab-page"
             />
-          </KeepAlive>
-        </transition>
-
-        <transition
-          v-bind="pageTransitionProps"
-          appear
-        >
-          <component
-            v-if="!controller.options.keepAlive || isRefreshing(route)"
-            :is="Component"
-            :key="controller.getRouteKey(route) + (isRefreshing(route) ? '-refresh' : '')"
-            class="router-tab-page"
-          />
-        </transition>
+          </transition>
+        </template>
       </RouterView>
     </div>
 
@@ -116,9 +128,8 @@ import type {
   TransitionLike
 } from '../core/types'
 import { getTransOpt } from '../util/index'
-import { routerTabsKey } from '../constants'
+import { routerTabsKey, routerTabsCookie } from '../constants'
 import { useRouterTabsPersistence } from '../persistence'
-
 
 interface ResolvedMenuItem {
   id: string
@@ -169,14 +180,23 @@ export default defineComponent({
     },
     cookieKey: {
       type: String,
-      default: null
+      default: routerTabsCookie
     },
     persistence: {
       type: Object as PropType<RouterTabsPersistenceOptions | null>,
       default: null
+    },
+    sortable: {
+      type: Boolean,
+      default: true
+    },
+    titleResolver: {
+      type: Function as PropType<(tab: TabRecord) => string>,
+      default: null
     }
   },
-  setup(props) {
+  emits: ['tab-sort', 'tab-sorted'],
+  setup(props, { emit }) {
     const instance = getCurrentInstance()
     if (!instance) {
       throw new Error('[RouterTab] component must be used within a Vue application context.')
@@ -193,17 +213,23 @@ export default defineComponent({
       maxAlive: props.maxAlive,
       keepLastTab: props.keepLastTab,
       appendPosition: props.append,
-      defaultRoute: props.defaultPage
+      defaultRoute: props.defaultPage,
     })
 
     provide(routerTabsKey, controller)
     instance.appContext.config.globalProperties.$tabs = controller
 
-    if (props.cookieKey || props.persistence) {
+    const hasCustomSlot = computed(() => Boolean(instance?.slots?.default))
+
+    if (props.cookieKey !== null || props.persistence) {
       const options: RouterTabsPersistenceOptions = {
         ...(props.persistence ?? {})
       }
-      if (props.cookieKey) options.cookieKey = props.cookieKey
+      if (props.cookieKey !== null) {
+        options.cookieKey = props.cookieKey || routerTabsCookie
+      } else if (!options.cookieKey) {
+        options.cookieKey = routerTabsCookie
+      }
       useRouterTabsPersistence(options)
     }
 
@@ -214,6 +240,14 @@ export default defineComponent({
       visible: false,
       target: null as TabRecord | null,
       position: { x: 0, y: 0 }
+    })
+
+    // Drag and drop state
+    const dragState = reactive({
+      dragging: false,
+      dragIndex: -1,
+      dropIndex: -1,
+      dragTab: null as TabRecord | null
     })
 
     type MenuConfig = RouterTabsMenuConfig
@@ -373,7 +407,10 @@ export default defineComponent({
       await item.action()
     }
 
-    function tabTitle(tab: TabRecord) {
+    function getTabTitle(tab: TabRecord): string {
+      if (props.titleResolver) {
+        return props.titleResolver(tab)
+      }
       if (typeof tab.title === 'string') return tab.title
       if (Array.isArray(tab.title) && tab.title.length) return String(tab.title[0])
       return tab.fullPath
@@ -399,7 +436,9 @@ export default defineComponent({
         'router-tab__item',
         {
           'is-active': controller.activeId.value === tab.id,
-          'is-closable': isClosable(tab)
+          'is-closable': isClosable(tab),
+          'is-dragging': dragState.dragging && dragState.dragTab?.id === tab.id,
+          'is-drag-over': dragState.dropIndex === getTabIndex(tab.id)
         },
         tab.tabClass
       ]
@@ -407,6 +446,66 @@ export default defineComponent({
 
     function isRefreshing(route: RouteLocationNormalizedLoaded) {
       return controller.refreshingKey.value === controller.getRouteKey(route)
+    }
+
+    // Drag and drop handlers
+    function onDragStart(tab: TabRecord, index: number, event: DragEvent) {
+      if (!props.sortable) return
+      
+      dragState.dragging = true
+      dragState.dragIndex = index
+      dragState.dragTab = tab
+      
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move'
+        event.dataTransfer.setData('text/plain', tab.id)
+      }
+
+      emit('tab-sort', { tab, index })
+    }
+
+    function onDragOver(index: number, event: DragEvent) {
+      if (!props.sortable || !dragState.dragging) return
+      event.preventDefault()
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move'
+      }
+    }
+
+    function onDragEnter(index: number) {
+      if (!props.sortable || !dragState.dragging) return
+      dragState.dropIndex = index
+    }
+
+    function onDragLeave() {
+      if (!props.sortable || !dragState.dragging) return
+      // Don't reset dropIndex immediately to prevent flicker
+    }
+
+    function onDrop(index: number, event: DragEvent) {
+      if (!props.sortable || !dragState.dragging) return
+      
+      event.preventDefault()
+      
+      if (dragState.dragIndex !== -1 && dragState.dragIndex !== index) {
+        const movedTab = controller.tabs.splice(dragState.dragIndex, 1)[0]
+        controller.tabs.splice(index, 0, movedTab)
+        
+        emit('tab-sorted', {
+          tab: movedTab,
+          fromIndex: dragState.dragIndex,
+          toIndex: index
+        })
+      }
+
+      onDragEnd()
+    }
+
+    function onDragEnd() {
+      dragState.dragging = false
+      dragState.dragIndex = -1
+      dragState.dropIndex = -1
+      dragState.dragTab = null
     }
 
     onMounted(() => {
@@ -462,9 +561,16 @@ export default defineComponent({
       handleMenuAction,
       showContextMenu,
       hideContextMenu,
-      tabTitle,
+      getTabTitle,
       isClosable,
-      isRefreshing
+      isRefreshing,
+      hasCustomSlot,
+      onDragStart,
+      onDragOver,
+      onDragEnter,
+      onDragLeave,
+      onDrop,
+      onDragEnd
     }
   }
 })

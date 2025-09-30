@@ -4,7 +4,15 @@ import router from "./router";
 
 import RouterTab from "../../lib";
 
+import '@mdi/font/css/materialdesignicons.css'
+import 'vuetify/styles'
+import { createVuetify } from 'vuetify'
+
 const app = createApp(App);
+
+const vuetify = createVuetify()
+
+app.use(vuetify)
 
 app.use(router);
 

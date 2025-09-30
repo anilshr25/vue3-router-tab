@@ -36,6 +36,20 @@ The plugin registers the `<router-tab>` component globally. It also exposes an o
 </template>
 ```
 
+> Hint: `cookie-key` is optional. Omit it to fall back to the default `router-tabs:snapshot` cookie, or set your own as shown above.
+
+Need to customise the rendered output? Provide a slot and use the routed component directly—see [`example-app/src/App.vue`](example-app/src/App.vue) for a working sample:
+
+```vue
+<router-tab cookie-key="app-tabs">
+  <template #default="{ Component, route }">
+    <Suspense>
+      <component :is="Component" :key="route.fullPath" />
+    </Suspense>
+  </template>
+</router-tab>
+```
+
 Configure route metadata to control tab labels, icons, and lifecycle behaviour:
 
 ```ts
@@ -95,6 +109,48 @@ useRouterTabsPersistence({
 </script>
 ```
 The composable also exposes `serialize` / `deserialize` options so you can encrypt or customise the cookie payload.
+
+## Theme system
+
+The plugin initialises a lightweight theme layer on install:
+
+- Reads `tab-theme-style` (`'light'`, `'dark'`, or `'system'`; defaults to `'system'`).
+- Reads `tab-theme-primary-color` (defaults to `#0f172a`).
+- Applies the choice via `data-theme` and `--theme-primary` CSS variables, keeping “system” in sync with OS changes.
+
+Override the theme at runtime:
+
+```ts
+import { setRouterTabsTheme, setRouterTabsPrimary } from 'vue3-router-tab'
+
+setRouterTabsTheme('dark')
+setRouterTabsPrimary('#22c55e')
+```
+
+Customise the defaults with:
+
+```ts
+import { initRouterTabsTheme } from 'vue3-router-tab'
+
+initRouterTabsTheme({
+  defaultStyle: 'dark',
+  defaultPrimary: '#0ea5e9'
+})
+```
+
+### Custom rendering
+
+You can override the default routed view by providing a `#default` slot. The slot receives the same values you would normally get from `<RouterView v-slot>`:
+
+```vue
+<router-tab cookie-key="app-tabs">
+  <template #default="{ Component, route }">
+    <Suspense>
+      <component :is="Component" :key="route.fullPath" />
+    </Suspense>
+  </template>
+</router-tab>
+```
 
 ## Customising the context menu
 

@@ -3,6 +3,7 @@ import type {
   CloseTabOptions,
   RouteMatchResult,
   RouterTabsContext,
+  RouterTabsMenuPreset,
   RouterTabsOptions,
   RouterTabsSnapshot,
   RouterTabsSnapshotTab,
@@ -215,7 +216,7 @@ export function createRouterTabs(
     return options.defaultRoute
   }
 
-  async function closeTab(id: string | undefined = activeId.value, closeOptions: CloseTabOptions = {}) {
+  async function closeTab(id: string | null = activeId.value, closeOptions: CloseTabOptions = {}) {
     if (!id) return
     if (!closeOptions.force && options.keepLastTab && tabs.length === 1) {
       throw new Error('[RouterTabs] Unable to close the final tab when keepLastTab is true.')
