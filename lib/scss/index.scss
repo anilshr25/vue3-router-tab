@@ -202,7 +202,10 @@
     overflow: hidden;
   }
 }
-
+.router-tab__container {
+  padding: 10px;
+  border: 1px solid var(--router-tab-border);
+}
 // Context Menu using button colors
 .router-tab__contextmenu {
   position: fixed;
