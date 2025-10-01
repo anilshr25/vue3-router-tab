@@ -22,8 +22,6 @@ export type {
 
 export type { RouterTabsThemeOptions } from './theme'
 
-export type { TitleConfig, TitleReplacement } from './titleManager'
-
 export {
   routerTabsKey,
   useRouterTabs,
@@ -36,13 +34,16 @@ export {
 }
 
 export {
-  TitleManager,
-  titleManager,
-  processTitle,
-  replaceTitle,
-  addTitleReplacement,
-  useTitleManager
-} from './titleManager'
+  useReactiveTab,
+  useLoadingTab,
+  useNotificationTab,
+  useStatusTab
+} from './useReactiveTab'
+
+export type {
+  ReactiveTabState,
+  ReactiveTabReturn
+} from './useReactiveTab'
 
 import "./scss/index.scss";
 

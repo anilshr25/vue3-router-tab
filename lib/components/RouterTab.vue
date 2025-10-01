@@ -28,8 +28,8 @@
             @dragend="onDragEnd"
           >
             <i v-if="tab.icon" :class="['router-tab__item-icon', tab.icon]" />
-            <span class="router-tab__item-title" :title="getTabTitle(tab)">
-              {{ getTabTitle(tab) }}
+            <span class="router-tab__item-title" :title="getReactiveTabTitle(tab)">
+              {{ getReactiveTabTitle(tab) }}
             </span>
             <a
               v-if="isClosable(tab)"
@@ -48,7 +48,14 @@
     <div class="router-tab__container">
       <RouterView v-slot="routerSlot">
         <template v-if="hasCustomSlot">
-          <slot v-bind="{ ...routerSlot, controller }" />
+          <slot
+            v-bind="{
+              ...routerSlot,
+              controller,
+              // Expose a ref binder so custom slots can keep reactivity
+              pageRef: (el: any) => handleComponentRef(el, controller.getRouteKey(routerSlot.route))
+            }"
+          />
         </template>
         <template v-else>
           <transition
@@ -64,6 +71,7 @@
                 v-if="!isRefreshing(routerSlot.route)"
                 :is="routerSlot.Component"
                 :key="controller.getRouteKey(routerSlot.route)"
+                :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(routerSlot.route))"
                 class="router-tab-page"
               />
             </KeepAlive>
@@ -77,6 +85,7 @@
               v-if="!controller.options.keepAlive || isRefreshing(routerSlot.route)"
               :is="routerSlot.Component"
               :key="controller.getRouteKey(routerSlot.route) + (isRefreshing(routerSlot.route) ? '-refresh' : '')"
+              :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(routerSlot.route))"
               class="router-tab-page"
             />
           </transition>
@@ -111,6 +120,7 @@ import {
   onMounted,
   provide,
   reactive,
+  ref,
   watch
 } from 'vue'
 import { RouterView, type RouteLocationNormalizedLoaded } from 'vue-router'
@@ -130,7 +140,6 @@ import type {
 import { getTransOpt } from '../util/index'
 import { routerTabsKey, routerTabsCookie } from '../constants'
 import { useRouterTabsPersistence } from '../persistence'
-import { useTitleManager, type TitleConfig } from '../titleManager'
 
 interface ResolvedMenuItem {
   id: string
@@ -190,22 +199,6 @@ export default defineComponent({
     sortable: {
       type: Boolean,
       default: true
-    },
-    titleResolver: {
-      type: Function as PropType<(tab: TabRecord) => string>,
-      default: null
-    },
-    untitledText: {
-      type: String,
-      default: 'Untitled'
-    },
-    titleConfig: {
-      type: Object as PropType<TitleConfig>,
-      default: () => ({})
-    },
-    enableTitleReplacement: {
-      type: Boolean,
-      default: true
     }
   },
   emits: ['tab-sort', 'tab-sorted'],
@@ -234,12 +227,147 @@ export default defineComponent({
 
     const hasCustomSlot = computed(() => Boolean(instance?.slots?.default))
 
-    // Initialize title manager with merged config
-    const titleManagerConfig: TitleConfig = {
-      placeholder: props.untitledText,
-      ...props.titleConfig
+    // Force reactivity by creating a trigger ref
+    const tabUpdateTrigger = ref(0)
+    
+    // Reactive tab titles that update when tabs change
+    const reactiveTabTitles = computed(() => {
+      // Access the trigger to ensure reactivity
+      tabUpdateTrigger.value
+      const titles: Record<string, string> = {}
+      controller.tabs.forEach(tab => {
+        // Use the tab's current title (which is updated by watchers)
+        const currentTitle = typeof tab.title === 'string' ? tab.title : String(tab.title || getTabTitle(tab))
+        titles[tab.id] = currentTitle
+      })
+      return titles
+    })
+
+    // Function to trigger reactivity updates
+    function triggerTabUpdate() {
+      tabUpdateTrigger.value++
     }
-    const titleManagerInstance = useTitleManager(titleManagerConfig)
+
+    // Reactive tab update system
+    const componentInstances = new Map<string, any>()
+    const watchedProperties = new Map<string, (() => void)[]>()
+
+    // Watch for component instance changes and set up reactivity
+    function setupComponentWatching(routeKey: string, componentInstance: any) {
+      if (!componentInstance || componentInstances.has(routeKey)) return
+      
+      // setup watchers for exposed reactive tab props
+      
+      componentInstances.set(routeKey, componentInstance)
+      
+      // Find the tab for this route
+      const tab = controller.tabs.find(t => controller.getRouteKey(t.to) === routeKey)
+      if (!tab) return
+      
+      const unwatchers: (() => void)[] = []
+      
+      // Watch routeTabTitle for title updates
+      if (componentInstance.routeTabTitle !== undefined) {
+        const unwatchTitle = watch(
+          () => {
+            // Handle both ref values and regular values
+            const titleValue = componentInstance.routeTabTitle
+            return titleValue && typeof titleValue === 'object' && 'value' in titleValue ? titleValue.value : titleValue
+          },
+          (newTitle) => {
+            if (newTitle !== undefined && newTitle !== null) {
+              const titleString = String(newTitle)
+              tab.title = titleString
+              triggerTabUpdate() // Trigger reactivity
+            }
+          },
+          { immediate: true }
+        )
+        unwatchers.push(unwatchTitle)
+      }
+      
+      // Watch routeTabIcon for icon updates
+      if (componentInstance.routeTabIcon !== undefined) {
+        const unwatchIcon = watch(
+          () => {
+            const iconValue = componentInstance.routeTabIcon
+            return iconValue && typeof iconValue === 'object' && 'value' in iconValue ? iconValue.value : iconValue
+          },
+          (newIcon) => {
+            if (newIcon !== undefined && newIcon !== null) {
+              tab.icon = String(newIcon)
+              triggerTabUpdate() // Trigger reactivity
+            }
+          },
+          { immediate: true }
+        )
+        unwatchers.push(unwatchIcon)
+      }
+      
+      // Watch routeTabClosable for closable state updates
+      if (componentInstance.routeTabClosable !== undefined) {
+        const unwatchClosable = watch(
+          () => {
+            const closableValue = componentInstance.routeTabClosable
+            return closableValue && typeof closableValue === 'object' && 'value' in closableValue ? closableValue.value : closableValue
+          },
+          (newClosable) => {
+            if (newClosable !== undefined && newClosable !== null) {
+              tab.closable = Boolean(newClosable)
+              triggerTabUpdate() // Trigger reactivity
+            }
+          },
+          { immediate: true }
+        )
+        unwatchers.push(unwatchClosable)
+      }
+      
+      // Watch routeTabMeta for general meta updates
+      if (componentInstance.routeTabMeta !== undefined) {
+        const unwatchMeta = watch(
+          () => {
+            const metaValue = componentInstance.routeTabMeta
+            return metaValue && typeof metaValue === 'object' && 'value' in metaValue ? metaValue.value : metaValue
+          },
+          (newMeta) => {
+            if (newMeta && typeof newMeta === 'object') {
+              Object.assign(tab, newMeta)
+              triggerTabUpdate() // Trigger reactivity
+            }
+          },
+          { immediate: true, deep: true }
+        )
+        unwatchers.push(unwatchMeta)
+      }
+      
+      watchedProperties.set(routeKey, unwatchers)
+    }
+    
+    // Cleanup watchers when component is unmounted
+    function cleanupComponentWatching(routeKey: string) {
+      const unwatchers = watchedProperties.get(routeKey)
+      if (unwatchers) {
+        unwatchers.forEach(unwatcher => unwatcher())
+        watchedProperties.delete(routeKey)
+      }
+      componentInstances.delete(routeKey)
+    }
+    
+    // Handle component ref changes
+    function handleComponentRef(el: any, routeKey: string) {
+      if (el) {
+        // Component mounted - set up watching
+        // Check if properties are exposed directly on el (Vue 3 with defineExpose)
+        if (el.routeTabTitle !== undefined || el.routeTabIcon !== undefined || el.routeTabClosable !== undefined) {
+          setupComponentWatching(routeKey, el)
+        } else if (el.$ && (el.$.routeTabTitle !== undefined || el.$.routeTabIcon !== undefined || el.$.routeTabClosable !== undefined)) {
+          setupComponentWatching(routeKey, el.$)
+        }
+      } else if (el === null) {
+        // Component unmounted - cleanup
+        cleanupComponentWatching(routeKey)
+      }
+    }
 
     if (props.cookieKey !== null || props.persistence) {
       const options: RouterTabsPersistenceOptions = {
@@ -428,62 +556,16 @@ export default defineComponent({
     }
 
     function getTabTitle(tab: TabRecord): string {
-      // Use custom title resolver if provided
-      if (props.titleResolver) {
-        const resolvedTitle = props.titleResolver(tab)
-        return props.enableTitleReplacement 
-          ? titleManagerInstance.processTitle(resolvedTitle)
-          : resolvedTitle
-      }
-
-      // Use title manager for comprehensive title processing
-      if (props.enableTitleReplacement) {
-        return titleManagerInstance.processTitle(tab.title)
-      }
-
-      // Fallback to legacy behavior
       if (typeof tab.title === 'string' && tab.title.trim()) return tab.title
       if (Array.isArray(tab.title) && tab.title.length && String(tab.title[0]).trim()) return String(tab.title[0])
-      return props.untitledText
+      return 'Untitled'
     }
-
-    /**
-     * Replace tab title with new title if it matches specific patterns
-     */
-    function replaceTabTitle(tabId: string, newTitle: string, matchPatterns?: string[]): boolean {
-      const tab = controller.tabs.find(t => t.id === tabId)
-      if (!tab) return false
-
-      const currentTitle = tab.title
-      const updatedTitle = titleManagerInstance.replaceTitle(currentTitle, newTitle, matchPatterns)
-      
-      // Update the tab title if replacement occurred
-      if (updatedTitle !== titleManagerInstance.processTitle(currentTitle)) {
-        tab.title = updatedTitle
-        return true
-      }
-      
-      return false
-    }
-
-    /**
-     * Update tab title directly
-     */
-    function updateTabTitle(tabId: string, newTitle: string): boolean {
-      const tab = controller.tabs.find(t => t.id === tabId)
-      if (!tab) return false
-
-      tab.title = props.enableTitleReplacement 
-        ? titleManagerInstance.processTitle(newTitle)
-        : newTitle
-      return true
-    }
-
-    /**
-     * Add custom title replacement rule
-     */
-    function addTitleReplacement(from: string, to: string): void {
-      titleManagerInstance.addReplacement(from, to)
+    
+    // Reactive function to get tab title
+    function getReactiveTabTitle(tab: TabRecord): string {
+      // Access the reactive titles to ensure reactivity
+      const reactiveTitles = reactiveTabTitles.value
+      return reactiveTitles[tab.id] || getTabTitle(tab)
     }
 
     function isClosable(tab: TabRecord) {
@@ -585,6 +667,13 @@ export default defineComponent({
     onBeforeUnmount(() => {
       document.removeEventListener('keydown', hideContextMenu)
       instance.appContext.config.globalProperties.$tabs = null
+      
+      // Cleanup all component watchers
+      watchedProperties.forEach((unwatchers) => {
+        unwatchers.forEach(unwatcher => unwatcher())
+      })
+      watchedProperties.clear()
+      componentInstances.clear()
     })
 
     watch(
@@ -632,9 +721,6 @@ export default defineComponent({
       showContextMenu,
       hideContextMenu,
       getTabTitle,
-      replaceTabTitle,
-      updateTabTitle,
-      addTitleReplacement,
       isClosable,
       isRefreshing,
       hasCustomSlot,
@@ -643,7 +729,12 @@ export default defineComponent({
       onDragEnter,
       onDragLeave,
       onDrop,
-      onDragEnd
+      onDragEnd,
+      setupComponentWatching,
+      cleanupComponentWatching,
+      handleComponentRef,
+      getReactiveTabTitle,
+      triggerTabUpdate
     }
   }
 })

@@ -79,6 +79,13 @@ const menuItems: MenuItem[] = [
   { title: 'Orders', icon: 'mdi-cart', to: '/orders', badge: '5' },
   { title: 'Analytics', icon: 'mdi-chart-line', to: '/analytics' },
   { title: 'Settings', icon: 'mdi-cog', to: '/settings' },
+    { title: 'Test Untitled', icon: 'mdi-test-tube', to: '/test-untitled' },
+    { title: 'Ds Demo', icon: 'mdi-test-tube', to: '/test-untitled' },
+    { title: 'Advanced Demo', icon: 'mdi-rocket', to: '/advanced-demo' },
+    { title: 'Composable Demo', icon: 'mdi-puzzle', to: '/composable-demo' },
+    { title: 'Simple Test', icon: 'mdi-flask', to: '/simple-test' },
+    { title: 'Debug Test', icon: 'mdi-bug-outline', to: '/debug-test' },
+
 ]
 
 const toggleTheme = () => {

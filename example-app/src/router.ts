@@ -75,20 +75,47 @@ const routes = [
       },
       {
         path: '/test-untitled',
-        name: 'TestUntitled',
-        component: () => import('./views/Dashboard.vue'),
+        name: 'test-untitled',
+        component: () => import('./views/TestUntitled.vue'),
         meta: {
-          // No title provided - will show "No Title" from untitled-text prop
-          icon: 'fas fa-test',
+          title: 'Then Demos',
+          icon: 'mdi-test-tube',
         },
       },
       {
-        path: '/title-demo',
-        name: 'TitleDemo',
-        component: () => import('./components/TitleManagementDemo.vue'),
+        path: '/advanced-demo',
+        name: 'AdvancedDemo',
+        component: () => import('./views/AdvancedTabDemo.vue'),
         meta: {
-          title: 'Title Management Demo',
-          icon: 'fas fa-edit',
+          title: 'Advanced Demo',
+          icon: 'mdi-rocket',
+        },
+      },
+      {
+        path: '/composable-demo',
+        name: 'ComposableDemo',
+        component: () => import('./views/ComposableDemo.vue'),
+        meta: {
+          title: 'Composable Demo',
+          icon: 'mdi-puzzle',
+        },
+      },
+      {
+        path: '/simple-test',
+        name: 'SimpleTest',
+        component: () => import('./views/SimpleTest.vue'),
+        meta: {
+          title: 'Simple Test',
+          icon: 'mdi-test-tube-empty',
+        },
+      },
+      {
+        path: '/debug-test',
+        name: 'DebugTest',
+        component: () => import('./views/DebugTest.vue'),
+        meta: {
+          title: 'Debug Test',
+          icon: 'mdi-bug-outline',
         },
       },
       {

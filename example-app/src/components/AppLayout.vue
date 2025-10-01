@@ -133,9 +133,9 @@
           <router-tab 
             cookie-key="example-app-tabs"
           >
-            <template #default="{ Component }">
+            <template #default="{ Component, pageRef }">
               <transition name="fade" mode="out-in">
-                <component :is="Component" />
+                <component :is="Component" :ref="pageRef" />
               </transition>
             </template>
           </router-tab>
@@ -211,8 +211,12 @@ const props = withDefaults(defineProps<Props>(), {
     { title: 'Orders', icon: 'mdi-cart', to: '/orders', badge: '5' },
     { title: 'Analytics', icon: 'mdi-chart-line', to: '/analytics' },
     { title: 'Settings', icon: 'mdi-cog', to: '/settings' },
-    { title: 'Test Untitled', icon: 'mdi-test-tube', to: '/test-untitled' },
-    { title: 'Title Demo', icon: 'mdi-format-title', to: '/title-demo' },
+    { title: 'Debug Test', icon: 'mdi-bug-outline', to: '/debug-test' },
+    { title: 'Simple Test', icon: 'mdi-test-tube-empty', to: '/simple-test' },
+    { title: 'Ds Demo', icon: 'mdi-test-tube', to: '/test-untitled' },
+    { title: 'Advanced Demo', icon: 'mdi-rocket', to: '/advanced-demo' },
+    { title: 'Composable Demo', icon: 'mdi-puzzle', to: '/composable-demo' },
+    { title: 'Simple Test', icon: 'mdi-flask', to: '/simple-test' },
   ],
 })
 
@@ -243,25 +247,6 @@ const handleFooterLink = (link: string) => {
   emit('footerLink', link)
 }
 
-// Router Tab Methods - Enhanced Title Resolver
-const customTitleResolver = (tab: any) => {
-  console.log('🏷️ Resolving title for tab:', tab.title, tab)
-  
-  // Priority 1: Custom title from component
-  if (tab.meta?.customTitle) {
-    return tab.meta.customTitle
-  }
-  
-  return tab.title;
-}
-
-const onTabSort = ({ tab, index }: { tab: any, index: number }) => {
-  console.log('Tab drag started:', tab.meta?.title || 'Untitled', 'at index', index)
-}
-
-const onTabSorted = ({ tab, fromIndex, toIndex }: { tab: any, fromIndex: number, toIndex: number }) => {
-  console.log('Tab moved:', tab.meta?.title || 'Untitled', 'from', fromIndex, 'to', toIndex)
-}
 </script>
 
 <style scoped>

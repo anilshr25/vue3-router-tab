@@ -1,6 +1,6 @@
 # vue3-router-tab
 
-A Vue 3 tab-bar plugin that keeps multiple routes alive with transition support, context menus, advanced title management, and optional cookie-based persistence.
+A Vue 3 tab-bar plugin that keeps multiple routes alive with transition support, context menus, and optional cookie-based persistence.
 
 ## Installation
 
@@ -45,25 +45,12 @@ The plugin registers the `<router-tab>` component globally. It also exposes an o
   <router-tab 
     cookie-key="app-tabs"
     :sortable="true"
-    :title-resolver="customTitleResolver"
-    untitled-text="No Title"
     @tab-sort="onTabSort"
     @tab-sorted="onTabSorted"
   />
 </template>
 
 <script setup>
-function customTitleResolver(tab) {
-  // Custom title logic
-  if (tab.meta?.customTitle) {
-    return tab.meta.customTitle
-  }
-  if (tab.params?.id) {
-    return `Item ${tab.params.id}`
-  }
-  return tab.meta?.title || null // Will fall back to untitled-text
-}
-
 function onTabSort({ tab, index }) {
   console.log('Tab drag started:', tab.title, 'at index', index)
 }
@@ -133,23 +120,137 @@ const routes = [
 | `cookieKey` | `string` | `'router-tabs:snapshot'` | Cookie key for persistence |
 | `persistence` | `object \| null` | `null` | Persistence configuration |
 | `sortable` | `boolean` | `true` | Enable drag-and-drop tab sorting |
-| `titleResolver` | `function` | `null` | Custom function to resolve tab titles |
-| `untitledText` | `string` | `'Untitled'` | Text to display when tab has no title |
 
-### Title Resolution
+### Reactive Tab Updates
 
-The plugin provides flexible title resolution with the following priority:
+RouterTab automatically watches for reactive properties in your page components and updates the corresponding tab information in real-time. The tab titles, icons, and other properties displayed in the tab bar will automatically update when the reactive properties in your components change.
 
-1. **titleResolver function** - Custom function for complete control
-2. **meta.title** - Route meta title (string or array)
-3. **untitledText prop** - Fallback text (default: "Untitled")
+#### Watched Properties
+
+The following reactive properties in your page components are automatically monitored:
+
+- **`routeTabTitle`** - Updates the tab title
+- **`routeTabIcon`** - Updates the tab icon
+- **`routeTabClosable`** - Updates whether the tab can be closed
+- **`routeTabMeta`** - Updates additional tab metadata
+
+#### Basic Usage
 
 ```vue
-<router-tab 
-  :title-resolver="(tab) => tab.meta?.customTitle || 'My Tab'"
-  untitled-text="No Title"
-/>
+<template>
+  <div>
+    <button @click="updateTitle">Update Title</button>
+    <button @click="toggleLoading">Toggle Loading</button>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+
+// Simple reactive title - tab updates immediately when this changes
+const routeTabTitle = ref('My Page')
+
+// Dynamic title based on state
+const isLoading = ref(false)
+const routeTabTitle = computed(() => 
+  isLoading.value ? 'Loading...' : 'My Page'
+)
+
+// Dynamic icon - tab icon updates automatically
+const routeTabIcon = computed(() => 
+  isLoading.value ? 'mdi-loading mdi-spin' : 'mdi-page'
+)
+
+// Conditional closability - tab close button appears/disappears automatically
+const routeTabClosable = computed(() => !isLoading.value)
+
+// Functions that trigger reactive updates
+function updateTitle() {
+  routeTabTitle.value = `Updated ${Date.now()}`
+}
+
+function toggleLoading() {
+  isLoading.value = !isLoading.value
+}
+</script>
 ```
+
+#### Advanced Examples
+
+```vue
+<script setup>
+import { ref, computed } from 'vue'
+
+const notifications = ref(0)
+const hasError = ref(false)
+const isProcessing = ref(false)
+
+// Dynamic title with notification count
+const routeTabTitle = computed(() => {
+  if (hasError.value) return 'Error!'
+  if (isProcessing.value) return 'Processing...'
+  if (notifications.value > 0) return `Messages (${notifications.value})`
+  return 'Dashboard'
+})
+
+// State-based icons
+const routeTabIcon = computed(() => {
+  if (hasError.value) return 'mdi-alert'
+  if (isProcessing.value) return 'mdi-loading mdi-spin'
+  if (notifications.value > 0) return 'mdi-bell-badge'
+  return 'mdi-view-dashboard'
+})
+
+// Prevent closing during critical operations
+const routeTabClosable = computed(() => !isProcessing.value)
+
+// Custom metadata for advanced use cases
+const routeTabMeta = computed(() => ({
+  status: hasError.value ? 'error' : 'normal',
+  count: notifications.value,
+  timestamp: Date.now()
+}))
+</script>
+```
+
+#### Using Composables
+
+For easier reactive tab management, use the provided composables:
+
+```vue
+<script setup>
+import { 
+  useReactiveTab, 
+  useLoadingTab, 
+  useNotificationTab, 
+  useStatusTab 
+} from 'vue3-router-tab'
+
+// Basic composable
+const { routeTabTitle, routeTabIcon, updateTitle } = useReactiveTab({
+  title: 'My Page',
+  icon: 'mdi-page'
+})
+
+// Loading state preset
+const isLoading = ref(false)
+const loadingTab = useLoadingTab(isLoading, 'Dashboard')
+
+// Notification preset
+const count = ref(0)
+const notificationTab = useNotificationTab(count, 'Messages')
+
+// Status preset
+const status = ref('normal')
+const statusTab = useStatusTab(status, 'Process')
+</script>
+```
+
+**Available Composables:**
+- `useReactiveTab(config)` - Basic reactive tab management
+- `useLoadingTab(loading, baseTitle)` - Loading state management
+- `useNotificationTab(count, baseTitle, baseIcon)` - Notification badges
+- `useStatusTab(status, baseTitle)` - Status-based updates
 
 ### Tab Closing Behavior
 
@@ -247,93 +348,7 @@ Enable drag-and-drop tab reordering with the `sortable` prop:
 />
 ```
 
-### Advanced Title Management
 
-Comprehensive title management with replacement rules, normalization, and smart fallbacks:
-
-```vue
-<router-tab 
-  :title-resolver="customTitleResolver"
-  :title-config="{
-    placeholder: 'Untitled Document',
-    maxLength: 30,
-    capitalize: true,
-    replacements: {
-      'profile': 'User Profile',
-      'settings': 'App Settings',
-      'untitled': 'New Document'
-    }
-  }"
-  :enable-title-replacement="true"
-  untitled-text="No Title"
-/>
-```
-
-**Key Features:**
-- **Smart Processing**: Handles null, undefined, empty strings, arrays, and objects
-- **Custom Replacements**: Replace specific title patterns (case-insensitive)
-- **Length Management**: Automatic truncation for long titles
-- **Normalization**: Trim whitespace, capitalize, and apply word transformations
-- **Flexible Fallbacks**: Configurable placeholder text for missing titles
-
-**Programmatic Title Management:**
-```vue
-<script setup>
-const routerTabRef = ref()
-
-// Replace title if it matches patterns
-const updateProfileTitle = () => {
-  routerTabRef.value?.replaceTabTitle(
-    'profile-tab-id', 
-    'My New Profile',
-    ['profile', 'untitled'] // Match patterns
-  )
-}
-
-// Add custom replacement rules
-const addTitleRule = () => {
-  routerTabRef.value?.addTitleReplacement('admin', 'Administration')
-}
-</script>
-
-<template>
-  <router-tab ref="routerTabRef" />
-</template>
-```
-
-**Standalone Usage:**
-```typescript
-import { TitleManager, processTitle } from 'vue3-router-tab'
-
-// Quick processing
-const title = processTitle('untitled') // "Untitled"
-
-// Advanced configuration
-const titleManager = new TitleManager({
-  placeholder: 'No Title',
-  replacements: { 'profile': 'User Profile' }
-})
-const result = titleManager.processTitle('profile') // "User Profile"
-```
-
-📖 **[Complete Title Management Documentation](TITLE_MANAGEMENT.md)**
-
-### Custom Title Resolution (Legacy)
-
-For simpler title customization, use the title resolver function:
-
-```vue
-<router-tab 
-  :title-resolver="(tab) => {
-    // Custom logic for tab titles
-    if (tab.meta?.isDynamic) {
-      return `Dynamic: ${tab.params?.id}`
-    }
-    return tab.meta?.title || 'Untitled'
-  }"
-  untitled-text="No Name"
-/>
-```
 
 ### Persistence Options
 
