@@ -85,7 +85,6 @@ const toggleTheme = () => {
   const themeStyle = window.localStorage.getItem('tab-theme-style')
 
   theme.change(themeStyle == 'dark' ? 'light' : 'dark')
-  console.log('Toggle theme clicked', theme.global.current.value )
 
   window.localStorage.setItem('tab-theme-style', themeStyle == 'dark' ? 'light' : 'dark')
 }

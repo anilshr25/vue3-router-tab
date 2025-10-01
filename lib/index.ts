@@ -22,6 +22,8 @@ export type {
 
 export type { RouterTabsThemeOptions } from './theme'
 
+export type { TitleConfig, TitleReplacement } from './titleManager'
+
 export {
   routerTabsKey,
   useRouterTabs,
@@ -32,6 +34,15 @@ export {
   setRouterTabsTheme,
   setRouterTabsPrimary
 }
+
+export {
+  TitleManager,
+  titleManager,
+  processTitle,
+  replaceTitle,
+  addTitleReplacement,
+  useTitleManager
+} from './titleManager'
 
 import "./scss/index.scss";
 

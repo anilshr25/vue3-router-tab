@@ -46,7 +46,7 @@ const defaultColors: ColorStyle = {
   activeText: "#ffffff",
   activeBorder: "#034960",
   
-  headerBackground: "#ffff",
+  headerBackground: "#ffffff",
   
   buttonBackground: "#f8fafc",
   buttonColor: "#034960",
@@ -90,6 +90,7 @@ function applyPrimary(color: ColorStyle) {
   document.documentElement.style.setProperty('--router-tab-active-button-color', color.activeButtonColor ?? defaultColors.activeButtonColor)
   document.documentElement.style.setProperty('--router-tab-button-background', color.buttonBackground ?? defaultColors.buttonBackground)
   document.documentElement.style.setProperty('--router-tab-active-button-background', color.activeButtonBackground ?? defaultColors.activeButtonBackground)
+  document.documentElement.style.setProperty('--router-tab-icon-color', color.iconColor ?? defaultColors.iconColor)
 }
 
 function applyStyle(style: 'light' | 'dark' | 'system') {

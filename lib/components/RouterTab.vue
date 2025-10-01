@@ -27,8 +27,8 @@
             @drop="onDrop(index, $event)"
             @dragend="onDragEnd"
           >
+            <i v-if="tab.icon" :class="['router-tab__item-icon', tab.icon]" />
             <span class="router-tab__item-title" :title="getTabTitle(tab)">
-              <i v-if="tab.icon" :class="['router-tab__item-icon', tab.icon]" />
               {{ getTabTitle(tab) }}
             </span>
             <a
@@ -130,6 +130,7 @@ import type {
 import { getTransOpt } from '../util/index'
 import { routerTabsKey, routerTabsCookie } from '../constants'
 import { useRouterTabsPersistence } from '../persistence'
+import { useTitleManager, type TitleConfig } from '../titleManager'
 
 interface ResolvedMenuItem {
   id: string
@@ -193,6 +194,18 @@ export default defineComponent({
     titleResolver: {
       type: Function as PropType<(tab: TabRecord) => string>,
       default: null
+    },
+    untitledText: {
+      type: String,
+      default: 'Untitled'
+    },
+    titleConfig: {
+      type: Object as PropType<TitleConfig>,
+      default: () => ({})
+    },
+    enableTitleReplacement: {
+      type: Boolean,
+      default: true
     }
   },
   emits: ['tab-sort', 'tab-sorted'],
@@ -220,6 +233,13 @@ export default defineComponent({
     instance.appContext.config.globalProperties.$tabs = controller
 
     const hasCustomSlot = computed(() => Boolean(instance?.slots?.default))
+
+    // Initialize title manager with merged config
+    const titleManagerConfig: TitleConfig = {
+      placeholder: props.untitledText,
+      ...props.titleConfig
+    }
+    const titleManagerInstance = useTitleManager(titleManagerConfig)
 
     if (props.cookieKey !== null || props.persistence) {
       const options: RouterTabsPersistenceOptions = {
@@ -408,12 +428,62 @@ export default defineComponent({
     }
 
     function getTabTitle(tab: TabRecord): string {
+      // Use custom title resolver if provided
       if (props.titleResolver) {
-        return props.titleResolver(tab)
+        const resolvedTitle = props.titleResolver(tab)
+        return props.enableTitleReplacement 
+          ? titleManagerInstance.processTitle(resolvedTitle)
+          : resolvedTitle
       }
-      if (typeof tab.title === 'string') return tab.title
-      if (Array.isArray(tab.title) && tab.title.length) return String(tab.title[0])
-      return tab.fullPath
+
+      // Use title manager for comprehensive title processing
+      if (props.enableTitleReplacement) {
+        return titleManagerInstance.processTitle(tab.title)
+      }
+
+      // Fallback to legacy behavior
+      if (typeof tab.title === 'string' && tab.title.trim()) return tab.title
+      if (Array.isArray(tab.title) && tab.title.length && String(tab.title[0]).trim()) return String(tab.title[0])
+      return props.untitledText
+    }
+
+    /**
+     * Replace tab title with new title if it matches specific patterns
+     */
+    function replaceTabTitle(tabId: string, newTitle: string, matchPatterns?: string[]): boolean {
+      const tab = controller.tabs.find(t => t.id === tabId)
+      if (!tab) return false
+
+      const currentTitle = tab.title
+      const updatedTitle = titleManagerInstance.replaceTitle(currentTitle, newTitle, matchPatterns)
+      
+      // Update the tab title if replacement occurred
+      if (updatedTitle !== titleManagerInstance.processTitle(currentTitle)) {
+        tab.title = updatedTitle
+        return true
+      }
+      
+      return false
+    }
+
+    /**
+     * Update tab title directly
+     */
+    function updateTabTitle(tabId: string, newTitle: string): boolean {
+      const tab = controller.tabs.find(t => t.id === tabId)
+      if (!tab) return false
+
+      tab.title = props.enableTitleReplacement 
+        ? titleManagerInstance.processTitle(newTitle)
+        : newTitle
+      return true
+    }
+
+    /**
+     * Add custom title replacement rule
+     */
+    function addTitleReplacement(from: string, to: string): void {
+      titleManagerInstance.addReplacement(from, to)
     }
 
     function isClosable(tab: TabRecord) {
@@ -562,6 +632,9 @@ export default defineComponent({
       showContextMenu,
       hideContextMenu,
       getTabTitle,
+      replaceTabTitle,
+      updateTabTitle,
+      addTitleReplacement,
       isClosable,
       isRefreshing,
       hasCustomSlot,

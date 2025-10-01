@@ -12,6 +12,18 @@
   --router-tab-header-height: #{$router-tab-header-height};
   --router-tab-padding: #{$router-tab-padding};
   --router-tab-font-size: #{$router-tab-font-size};
+  --router-tab-transition: #{$router-tab-transition};
+  
+  // Colors (will be overridden by theme system)
+  --router-tab-primary: #{$router-tab-primary};
+  --router-tab-background: #{$router-tab-bg-light};
+  --router-tab-text: #{$router-tab-text-light};
+  --router-tab-border: #{$router-tab-border-light};
+  --router-tab-header-bg: #{$router-tab-bg-light};
+  --router-tab-active-background: #{$router-tab-primary};
+  --router-tab-active-text: #ffffff;
+  --router-tab-active-border: #{$router-tab-primary};
+  --router-tab-icon-color: #475569;
 }
 
 // =============================================================================

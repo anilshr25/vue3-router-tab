@@ -74,6 +74,24 @@ const routes = [
         },
       },
       {
+        path: '/test-untitled',
+        name: 'TestUntitled',
+        component: () => import('./views/Dashboard.vue'),
+        meta: {
+          // No title provided - will show "No Title" from untitled-text prop
+          icon: 'fas fa-test',
+        },
+      },
+      {
+        path: '/title-demo',
+        name: 'TitleDemo',
+        component: () => import('./components/TitleManagementDemo.vue'),
+        meta: {
+          title: 'Title Management Demo',
+          icon: 'fas fa-edit',
+        },
+      },
+      {
         path: '/:pathMatch(.*)*',
         name: 'NotFound',
         component: () => import('./views/NotFound.vue'),
