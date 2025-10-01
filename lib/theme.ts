@@ -78,7 +78,6 @@ const defaultDarkColor: ColorStyle = {
 
 function applyPrimary(color: ColorStyle) {
   if (typeof document === 'undefined') return
-  console.log('applyPrimary', color)
   document.documentElement.style.setProperty('--router-tab-primary', color.primary ?? defaultColors.primary)
   document.documentElement.style.setProperty('--router-tab-header-bg', color.headerBackground ?? defaultColors.headerBackground)
   document.documentElement.style.setProperty('--router-tab-background', color.background ?? defaultColors.background)
