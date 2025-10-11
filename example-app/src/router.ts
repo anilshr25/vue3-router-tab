@@ -101,24 +101,6 @@ const routes = [
         },
       },
       {
-        path: '/simple-test',
-        name: 'SimpleTest',
-        component: () => import('./views/SimpleTest.vue'),
-        meta: {
-          title: 'Simple Test',
-          icon: 'mdi-test-tube-empty',
-        },
-      },
-      {
-        path: '/debug-test',
-        name: 'DebugTest',
-        component: () => import('./views/DebugTest.vue'),
-        meta: {
-          title: 'Debug Test',
-          icon: 'mdi-bug-outline',
-        },
-      },
-      {
         path: '/:pathMatch(.*)*',
         name: 'NotFound',
         component: () => import('./views/NotFound.vue'),
