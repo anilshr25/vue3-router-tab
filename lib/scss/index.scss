@@ -344,8 +344,8 @@
 .router-tab-swap-leave-active {
   position: relative;
   transition:
-    opacity 0.5s ease,
-    transform 0.5s ease;
+    opacity 0.3s ease,
+    transform 0.3s ease;
   will-change: opacity, transform;
 }
 
@@ -378,8 +378,8 @@
 .router-tab-slide-leave-active {
   position: relative;
   transition:
-    opacity 0.5s ease,
-    transform 0.5s ease;
+    opacity 0.3s ease,
+    transform 0.3s ease;
   will-change: opacity, transform;
 }
 
@@ -405,12 +405,12 @@
 
 // Fade transition - smooth fade in and out
 .router-tab-fade-enter-active {
-  transition: opacity 0.8s ease-in;
+  transition: opacity 0.4s ease-in;
   will-change: opacity;
 }
 
 .router-tab-fade-leave-active {
-  transition: opacity 0.6s ease-out;
+  transition: opacity 0.3s ease-out;
   will-change: opacity;
 }
 
@@ -435,8 +435,8 @@
 .router-tab-scale-leave-active {
   position: relative;
   transition:
-    opacity 0.6s ease,
-    transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity 0.35s ease,
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   will-change: opacity, transform;
 }
 
@@ -465,8 +465,8 @@
 .router-tab-flip-leave-active {
   position: relative;
   transition:
-    opacity 0.6s ease,
-    transform 0.6s ease;
+    opacity 0.35s ease,
+    transform 0.35s ease;
   transform-style: preserve-3d;
   will-change: opacity, transform;
 }
@@ -496,8 +496,8 @@
 .router-tab-rotate-leave-active {
   position: relative;
   transition:
-    opacity 0.6s ease,
-    transform 0.6s ease;
+    opacity 0.20s ease,
+    transform 0.20s ease;
   will-change: opacity, transform;
 }
 
@@ -523,11 +523,11 @@
 
 // Bounce transition - elastic bounce effect
 .router-tab-bounce-enter-active {
-  animation: router-tab-bounce-in 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  animation: router-tab-bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 .router-tab-bounce-leave-active {
-  animation: router-tab-bounce-out 0.5s ease-in;
+  animation: router-tab-bounce-out 0.3s ease-in;
 }
 
 @keyframes router-tab-bounce-in {

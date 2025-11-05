@@ -295,7 +295,6 @@ export function createRouterTabs(
 
     refreshingKey.value = id
     await nextTick()
-    if (!force) await nextTick()
     refreshingKey.value = null
   }
 
