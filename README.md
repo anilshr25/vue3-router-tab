@@ -2,6 +2,19 @@
 
 A Vue 3 tab-bar plugin that keeps multiple routes alive with transition support, context menus, and optional cookie-based persistence.
 
+## ✨ Features
+
+- 🎯 **Multi-tab Navigation** - Keep multiple routes alive simultaneously
+- 🔄 **7 Built-in Transitions** - Smooth page transitions (swap, slide, fade, scale, flip, rotate, bounce)
+- 🎨 **Reactive Tab Titles** - Automatically update tab titles, icons, and closability from component state
+- 🖱️ **Context Menu** - Right-click tabs for refresh, close, and navigation options
+- 🔀 **Drag & Drop** - Reorder tabs with drag-and-drop
+- 💾 **Cookie Persistence** - Restore tabs on page refresh
+- 🎭 **Theme Support** - Light, dark, and system themes with customizable colors
+- ⚡ **KeepAlive Support** - Preserve component state when switching tabs
+- 🎛️ **Highly Configurable** - Extensive props and events for customization
+- 📱 **TypeScript Support** - Full TypeScript definitions included
+
 ## Installation
 
 ```bash
@@ -121,136 +134,315 @@ const routes = [
 | `persistence` | `object \| null` | `null` | Persistence configuration |
 | `sortable` | `boolean` | `true` | Enable drag-and-drop tab sorting |
 
-### Reactive Tab Updates
+## Page Transitions
 
-RouterTab automatically watches for reactive properties in your page components and updates the corresponding tab information in real-time. The tab titles, icons, and other properties displayed in the tab bar will automatically update when the reactive properties in your components change.
+Vue3 Router Tab includes 7 built-in page transition effects that are displayed when switching between tabs or refreshing pages.
 
-#### Watched Properties
+### Available Transitions
 
-The following reactive properties in your page components are automatically monitored:
+| Transition | Description | Use Case |
+|------------|-------------|----------|
+| `router-tab-swap` | Slides up/down with fade (default) | General purpose, smooth |
+| `router-tab-slide` | Horizontal sliding animation | Dashboard-style navigation |
+| `router-tab-fade` | Simple opacity fade | Subtle, minimal distraction |
+| `router-tab-scale` | Zoom in/out effect | Dramatic, attention-grabbing |
+| `router-tab-flip` | 3D flip animation | Creative, modern feel |
+| `router-tab-rotate` | Rotation with scale | Playful, dynamic |
+| `router-tab-bounce` | Elastic bounce effect | Fun, energetic |
 
-- **`routeTabTitle`** - Updates the tab title
-- **`routeTabIcon`** - Updates the tab icon
-- **`routeTabClosable`** - Updates whether the tab can be closed
-- **`routeTabMeta`** - Updates additional tab metadata
+### Using Transitions
 
-#### Basic Usage
+#### Default Transition
+
+```vue
+<router-tab />
+<!-- Uses router-tab-swap by default -->
+```
+
+#### Custom Transition
+
+```vue
+<router-tab 
+  :page-transition="{ name: 'router-tab-scale', mode: 'out-in' }"
+/>
+```
+
+#### String Shorthand
+
+```vue
+<router-tab page-transition="router-tab-fade" />
+```
+
+#### Dynamic Transitions
+
+Change transitions at runtime:
 
 ```vue
 <template>
   <div>
-    <button @click="updateTitle">Update Title</button>
-    <button @click="toggleLoading">Toggle Loading</button>
+    <select v-model="currentTransition">
+      <option value="router-tab-swap">Swap</option>
+      <option value="router-tab-slide">Slide</option>
+      <option value="router-tab-fade">Fade</option>
+      <option value="router-tab-scale">Scale</option>
+      <option value="router-tab-flip">Flip</option>
+      <option value="router-tab-rotate">Rotate</option>
+      <option value="router-tab-bounce">Bounce</option>
+    </select>
+    
+    <router-tab 
+      :page-transition="{ name: currentTransition, mode: 'out-in' }"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
+const currentTransition = ref('router-tab-swap')
+</script>
+```
 
-// Simple reactive title - tab updates immediately when this changes
-const routeTabTitle = ref('My Page')
+### Custom Transitions
 
-// Dynamic title based on state
-const isLoading = ref(false)
-const routeTabTitle = computed(() => 
-  isLoading.value ? 'Loading...' : 'My Page'
-)
+Create your own transitions by defining CSS classes:
 
-// Dynamic icon - tab icon updates automatically
-const routeTabIcon = computed(() => 
-  isLoading.value ? 'mdi-loading mdi-spin' : 'mdi-page'
-)
-
-// Conditional closability - tab close button appears/disappears automatically
-const routeTabClosable = computed(() => !isLoading.value)
-
-// Functions that trigger reactive updates
-function updateTitle() {
-  routeTabTitle.value = `Updated ${Date.now()}`
+```css
+/* Your custom transition */
+.my-custom-enter-active,
+.my-custom-leave-active {
+  transition: all 0.5s ease;
 }
 
-function toggleLoading() {
-  isLoading.value = !isLoading.value
+.my-custom-enter-from {
+  opacity: 0;
+  transform: translateX(100px);
+}
+
+.my-custom-leave-to {
+  opacity: 0;
+  transform: translateX(-100px);
+}
+```
+
+```vue
+<router-tab page-transition="my-custom" />
+```
+
+### Transition Tips
+
+- **Performance**: Use `mode: 'out-in'` for smooth transitions without layout shifts
+- **Duration**: Built-in transitions are optimized at 0.5-0.8 seconds
+- **Accessibility**: Consider users with motion sensitivity - provide options to disable
+- **Context**: Match transition style to your app's design language
+
+## Changing Tab Titles Dynamically
+
+Vue3 Router Tab automatically watches for reactive properties in your page components and updates the corresponding tab information in real-time.
+
+### Quick Start
+
+Simply expose reactive properties from your component:
+
+```vue
+<template>
+  <div>
+    <h1>{{ routeTabTitle }}</h1>
+    <button @click="updateTitle">Change Tab Title</button>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+
+// This ref is automatically watched - tab title updates when it changes!
+const routeTabTitle = ref('My Page')
+
+function updateTitle() {
+  routeTabTitle.value = 'Updated Title'
 }
 </script>
 ```
 
-#### Advanced Examples
+### Watched Properties
+
+The following reactive properties are automatically monitored:
+
+| Property | Description | Example |
+|----------|-------------|---------|
+| `routeTabTitle` | Tab title text | `ref('Dashboard')` |
+| `routeTabIcon` | Tab icon class | `ref('mdi-home')` |
+| `routeTabClosable` | Can tab be closed | `ref(true)` |
+| `routeTabMeta` | Additional metadata | `ref({ badge: 5 })` |
+
+### Dynamic Titles with Computed
+
+Create titles that update based on your component state:
 
 ```vue
 <script setup>
 import { ref, computed } from 'vue'
 
+const isLoading = ref(false)
 const notifications = ref(0)
-const hasError = ref(false)
-const isProcessing = ref(false)
 
-// Dynamic title with notification count
+// Tab title automatically updates when dependencies change
 const routeTabTitle = computed(() => {
-  if (hasError.value) return 'Error!'
-  if (isProcessing.value) return 'Processing...'
+  if (isLoading.value) return 'Loading...'
   if (notifications.value > 0) return `Messages (${notifications.value})`
   return 'Dashboard'
 })
 
-// State-based icons
-const routeTabIcon = computed(() => {
-  if (hasError.value) return 'mdi-alert'
-  if (isProcessing.value) return 'mdi-loading mdi-spin'
-  if (notifications.value > 0) return 'mdi-bell-badge'
-  return 'mdi-view-dashboard'
-})
+// Tab icon changes based on state
+const routeTabIcon = computed(() => 
+  isLoading.value ? 'mdi-loading mdi-spin' : 'mdi-view-dashboard'
+)
 
-// Prevent closing during critical operations
-const routeTabClosable = computed(() => !isProcessing.value)
-
-// Custom metadata for advanced use cases
-const routeTabMeta = computed(() => ({
-  status: hasError.value ? 'error' : 'normal',
-  count: notifications.value,
-  timestamp: Date.now()
-}))
+// Prevent closing during operations
+const routeTabClosable = computed(() => !isLoading.value)
 </script>
 ```
 
-#### Using Composables
+### Real-World Examples
 
-For easier reactive tab management, use the provided composables:
+#### Example 1: User Profile with Name
 
 ```vue
 <script setup>
-import { 
-  useReactiveTab, 
-  useLoadingTab, 
-  useNotificationTab, 
-  useStatusTab 
-} from 'vue3-router-tab'
+import { ref, computed, onMounted } from 'vue'
 
-// Basic composable
-const { routeTabTitle, routeTabIcon, updateTitle } = useReactiveTab({
-  title: 'My Page',
-  icon: 'mdi-page'
+const user = ref(null)
+const isLoading = ref(true)
+
+const routeTabTitle = computed(() => 
+  isLoading.value ? 'Loading...' : `Profile - ${user.value?.name || 'Unknown'}`
+)
+
+const routeTabIcon = computed(() => 
+  isLoading.value ? 'mdi-loading mdi-spin' : 'mdi-account'
+)
+
+onMounted(async () => {
+  user.value = await fetchUser()
+  isLoading.value = false
 })
-
-// Loading state preset
-const isLoading = ref(false)
-const loadingTab = useLoadingTab(isLoading, 'Dashboard')
-
-// Notification preset
-const count = ref(0)
-const notificationTab = useNotificationTab(count, 'Messages')
-
-// Status preset
-const status = ref('normal')
-const statusTab = useStatusTab(status, 'Process')
 </script>
 ```
 
-**Available Composables:**
-- `useReactiveTab(config)` - Basic reactive tab management
-- `useLoadingTab(loading, baseTitle)` - Loading state management
-- `useNotificationTab(count, baseTitle, baseIcon)` - Notification badges
-- `useStatusTab(status, baseTitle)` - Status-based updates
+#### Example 2: Form with Unsaved Changes
+
+```vue
+<script setup>
+import { ref, computed } from 'vue'
+
+const formData = ref({})
+const hasUnsavedChanges = ref(false)
+
+const routeTabTitle = computed(() => 
+  hasUnsavedChanges.value ? '• Edit Form' : 'Edit Form'
+)
+
+const routeTabClosable = computed(() => !hasUnsavedChanges.value)
+
+function onChange() {
+  hasUnsavedChanges.value = true
+}
+</script>
+```
+
+#### Example 3: Real-time Notifications
+
+```vue
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+
+const unreadCount = ref(0)
+
+const routeTabTitle = computed(() => {
+  if (unreadCount.value === 0) return 'Messages'
+  return `Messages (${unreadCount.value})`
+})
+
+const routeTabIcon = computed(() => 
+  unreadCount.value > 0 ? 'mdi-bell-badge' : 'mdi-bell-outline'
+)
+
+// Simulate real-time updates
+onMounted(() => {
+  setInterval(() => {
+    unreadCount.value = Math.floor(Math.random() * 10)
+  }, 5000)
+})
+</script>
+```
+
+### Using the Composable API
+
+For advanced use cases, use the `useReactiveTab` composable:
+
+```vue
+<script setup>
+import { useReactiveTab } from 'vue3-router-tab'
+import { ref } from 'vue'
+
+const user = ref({ name: 'John Doe', status: 'online' })
+
+const { 
+  routeTabTitle, 
+  routeTabIcon, 
+  routeTabClosable 
+} = useReactiveTab({
+  title: () => `${user.value.name} - ${user.value.status}`,
+  icon: () => user.value.status === 'online' ? 'mdi-account' : 'mdi-account-off',
+  closable: () => user.value.status !== 'editing'
+})
+</script>
+```
+
+### Important Notes
+
+1. **Automatic Exposure in `<script setup>`**: Properties defined in `<script setup>` are automatically exposed - no need for `defineExpose()`
+2. **Reactive types**: Use `ref()` or `computed()` - plain values won't trigger updates
+3. **Automatic watching**: No manual watchers needed - the plugin handles everything
+4. **Performance**: Only active tab components are watched to minimize overhead
+
+> 💡 **Try it yourself**: Check out the live demo at `/title-test` in the example app to see all these features in action!
+
+### Options API Support
+
+If you're using the Options API, you need to expose the properties:
+
+```vue
+<script>
+import { ref, computed } from 'vue'
+
+export default {
+  setup() {
+    const routeTabTitle = ref('My Page')
+    const routeTabIcon = computed(() => 'mdi-page')
+    
+    return {
+      routeTabTitle,
+      routeTabIcon
+    }
+  }
+}
+</script>
+```
+
+Or with `defineExpose`:
+
+```vue
+<script setup>
+import { ref } from 'vue'
+
+const routeTabTitle = ref('My Page')
+
+// Only needed if you're NOT using top-level refs in <script setup>
+defineExpose({ routeTabTitle })
+</script>
+```
+
+**Note**: With `<script setup>`, top-level bindings are automatically exposed, so `defineExpose` is typically not needed.
 
 ### Tab Closing Behavior
 
@@ -394,6 +586,141 @@ Pass `false` to disable the context menu entirely.
 - `closeRights` - Close tabs to the right
 - `closeOthers` - Close all other tabs
 
+## Programmatic API
+
+Access the router tabs controller to programmatically manage tabs.
+
+### Using the Composable
+
+```vue
+<script setup>
+import { useRouterTabs } from 'vue3-router-tab'
+
+const tabs = useRouterTabs()
+
+// Available methods
+tabs.openTab('/users')              // Open a tab
+tabs.closeTab(tabId)                // Close a specific tab
+tabs.refreshTab(tabId)              // Refresh a tab
+tabs.refreshAll()                   // Refresh all tabs
+tabs.closeAll()                     // Close all tabs
+tabs.closeOthers(tabId)             // Close all except specified tab
+</script>
+```
+
+### Using Global Property
+
+```vue
+<script setup>
+import { getCurrentInstance } from 'vue'
+
+const instance = getCurrentInstance()
+const tabs = instance?.appContext.config.globalProperties.$tabs
+
+// Same methods available
+tabs?.openTab('/dashboard')
+tabs?.refreshTab('users-123')
+</script>
+```
+
+### Controller Methods
+
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `openTab(to, active?, replace?)` | Route location, activate flag, replace flag | Open or activate a tab |
+| `closeTab(id, options?)` | Tab ID, close options | Close a specific tab |
+| `refreshTab(id, force?)` | Tab ID, force flag | Refresh tab component |
+| `refreshAll(force?)` | Force flag | Refresh all tabs |
+| `closeAll(options?)` | Close options | Close all closable tabs |
+| `closeOthers(id, options?)` | Tab ID, options | Close all tabs except specified |
+| `removeTab(id, options?)` | Tab ID, options | Remove tab without navigation |
+
+### Example: Custom Tab Controls
+
+```vue
+<template>
+  <div>
+    <button @click="openDashboard">Open Dashboard</button>
+    <button @click="refreshCurrent">Refresh Current</button>
+    <button @click="closeAllTabs">Close All</button>
+  </div>
+</template>
+
+<script setup>
+import { useRouterTabs } from 'vue3-router-tab'
+import { useRoute } from 'vue-router'
+
+const tabs = useRouterTabs()
+const route = useRoute()
+
+function openDashboard() {
+  tabs.openTab('/dashboard', true)
+}
+
+function refreshCurrent() {
+  const currentTab = tabs.tabs.find(t => t.to.path === route.path)
+  if (currentTab) {
+    tabs.refreshTab(currentTab.id, true)
+  }
+}
+
+function closeAllTabs() {
+  tabs.closeAll({ force: true })
+}
+</script>
+```
+
+### Tab State Access
+
+```vue
+<script setup>
+import { useRouterTabs } from 'vue3-router-tab'
+
+const controller = useRouterTabs()
+
+// Access current state
+console.log(controller.tabs)           // Array of all tabs
+console.log(controller.activeId.value) // Current active tab ID
+console.log(controller.includeKeys)    // KeepAlive include keys
+</script>
+```
+
+## Events
+
+RouterTab emits events for tab interactions.
+
+### Available Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `tab-sort` | `{ tab, index }` | Fired when tab drag starts |
+| `tab-sorted` | `{ tab, fromIndex, toIndex }` | Fired when tab is dropped in new position |
+
+### Usage Example
+
+```vue
+<template>
+  <router-tab 
+    @tab-sort="onTabSort"
+    @tab-sorted="onTabSorted"
+  />
+</template>
+
+<script setup>
+function onTabSort({ tab, index }) {
+  console.log('Dragging tab:', tab.title, 'from index:', index)
+}
+
+function onTabSorted({ tab, fromIndex, toIndex }) {
+  console.log('Tab moved:', tab.title)
+  console.log('From:', fromIndex, 'To:', toIndex)
+  
+  // Save new order to backend
+  saveTabOrder(tab, toIndex)
+}
+</script>
+```
+
 ## Slots
 
 - `start` / `end` – positioned on either side of the tab list (ideal for toolbars or the `<router-tabs>` helper).
@@ -401,7 +728,64 @@ Pass `false` to disable the context menu entirely.
 
 ## Styling
 
-The package ships with its own CSS bundle (imported automatically). Override the `router-tab__*` classes in your stylesheet to customise the appearance.
+The package ships with its own CSS bundle (imported automatically). Override CSS custom properties or the `router-tab__*` classes to customize the appearance.
+
+### CSS Custom Properties
+
+```css
+:root {
+  /* Layout */
+  --router-tab-header-height: 48px;
+  --router-tab-padding: 16px;
+  --router-tab-font-size: 14px;
+  
+  /* Colors */
+  --router-tab-primary: #0f172a;
+  --router-tab-background: #ffffff;
+  --router-tab-text: #334155;
+  --router-tab-border: #e2e8f0;
+  --router-tab-active-background: #0f172a;
+  --router-tab-active-text: #ffffff;
+  
+  /* Icons & Buttons */
+  --router-tab-icon-color: #64748b;
+  --router-tab-button-background: #f1f5f9;
+  --router-tab-button-color: #0f172a;
+}
+```
+
+### Custom Styles Example
+
+```css
+/* Change tab height */
+.router-tab__header {
+  height: 56px;
+}
+
+/* Custom tab hover effect */
+.router-tab__item:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+/* Custom active tab */
+.router-tab__item.is-active {
+  background: #4f46e5;
+  border-radius: 8px 8px 0 0;
+}
+
+/* Custom close button */
+.router-tab__item-close {
+  border-radius: 4px;
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .router-tab {
+  --router-tab-background: #1e293b;
+  --router-tab-text: #f1f5f9;
+  --router-tab-border: #334155;
+}
+```
 
 ## Types
 
@@ -409,6 +793,133 @@ The package ships with its own CSS bundle (imported automatically). Override the
 import type { TabRecord, RouterTabsSnapshot, RouterTabsPersistenceOptions } from 'vue3-router-tab'
 ```
 
+## Examples
+
+Check out the [example-app](./example-app) directory for comprehensive demos including:
+
+- **Basic Usage** - Simple tab navigation
+- **Dynamic Titles** - Reactive tab title updates ([/title-test](./example-app/src/views/TitleTestDemo.vue))
+- **Transitions** - All 7 transition effects ([/transition-demo](./example-app/src/views/TransitionDemo.vue))
+- **Composables** - Using helper composables ([/composable-demo](./example-app/src/views/ComposableDemo.vue))
+- **Advanced Features** - Sorting, context menus, persistence
+
+### Run Examples
+
+```bash
+cd example-app
+npm install
+npm run dev
+```
+
+## Troubleshooting
+
+### Tab titles not updating
+
+**Problem**: Tab title doesn't change when component state updates.
+
+**Solution**: Ensure you're using reactive refs or computed properties:
+
+```vue
+<!-- ✅ Correct -->
+<script setup>
+const routeTabTitle = ref('My Page')  // Reactive
+</script>
+
+<!-- ❌ Wrong -->
+<script setup>
+const routeTabTitle = 'My Page'  // Plain string - won't update
+</script>
+```
+
+### Transitions not working
+
+**Problem**: Page transitions don't show when refreshing tabs.
+
+**Solution**: Make sure you're not using a custom default slot that overrides transitions. Remove the custom slot or include transition components:
+
+```vue
+<!-- ✅ Default behavior with transitions -->
+<router-tab page-transition="router-tab-fade" />
+
+<!-- ❌ Custom slot without transitions -->
+<router-tab>
+  <template #default="{ Component }">
+    <component :is="Component" />  <!-- No transition! -->
+  </template>
+</router-tab>
+
+<!-- ✅ Custom slot with transitions -->
+<router-tab>
+  <template #default="{ Component }">
+    <transition name="router-tab-fade" mode="out-in">
+      <component :is="Component" />
+    </transition>
+  </template>
+</router-tab>
+```
+
+### Tabs not persisting on refresh
+
+**Problem**: Tabs are lost when refreshing the browser.
+
+**Solution**: Add the `cookie-key` prop:
+
+```vue
+<router-tab cookie-key="my-app-tabs" />
+```
+
+Check that cookies are enabled in the browser and not being blocked.
+
+### KeepAlive not working
+
+**Problem**: Component state is lost when switching tabs.
+
+**Solution**: Ensure `:keep-alive="true"` (default) and components are properly keyed:
+
+```ts
+// In router config
+meta: {
+  keepAlive: true,  // Enable for this route
+  key: 'fullPath'   // Unique key per instance
+}
+```
+
+### TypeScript errors
+
+**Problem**: TypeScript shows errors for router tab properties.
+
+**Solution**: Import types and use them:
+
+```ts
+import type { TabRecord, RouterTabsOptions } from 'vue3-router-tab'
+
+const options: RouterTabsOptions = {
+  keepAlive: true,
+  maxAlive: 10
+}
+```
+
+## Browser Support
+
+- Chrome/Edge ≥ 90
+- Firefox ≥ 88
+- Safari ≥ 14
+- Modern mobile browsers
+
+## Contributing
+
+Contributions are welcome! Please read the [contributing guidelines](CONTRIBUTING.md) first.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
 ## License
 
 MIT
+
+---
+
+Made with ❤️ by the Vue community

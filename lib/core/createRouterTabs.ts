@@ -96,6 +96,7 @@ function createTabFromRoute(
     alive: resolveAlive(route, keepAliveDefault),
     reusable: resolveReusable(route, false),
     closable: meta.closable ?? true,
+    renderKey: typeof base.renderKey === 'number' ? base.renderKey : 0,
     ...meta,
     ...base
   }
@@ -134,7 +135,8 @@ function toSnapshotTab(tab: TabRecord): RouterTabsSnapshotTab {
     tips: tab.tips,
     icon: tab.icon,
     tabClass: tab.tabClass,
-    closable: tab.closable
+    closable: tab.closable,
+    renderKey: tab.renderKey
   }
 }
 
@@ -145,6 +147,9 @@ function fromSnapshotTab(snapshot: RouterTabsSnapshotTab): Partial<TabRecord> {
   if ('icon' in snapshot) base.icon = snapshot.icon
   if ('tabClass' in snapshot) base.tabClass = snapshot.tabClass
   if ('closable' in snapshot) base.closable = snapshot.closable
+  if ('renderKey' in snapshot && typeof snapshot.renderKey === 'number') {
+    base.renderKey = snapshot.renderKey
+  }
   return base
 }
 
@@ -158,7 +163,11 @@ export function createRouterTabs(
   const activeId = ref<string | null>(null)
   const current = shallowRef<TabRecord>()
   const refreshingKey = ref<string | null>(null)
-  const includeKeys = computed(() => tabs.filter(tab => tab.alive).map(tab => tab.id))
+  const includeKeys = computed(() =>
+    tabs
+      .filter(tab => tab.alive)
+      .map(tab => `${tab.id}::${tab.renderKey}`)
+  )
 
   let isHydrating = false
 
@@ -270,9 +279,16 @@ export function createRouterTabs(
     const tab = tabs.find(item => item.id === id)
     if (!tab) return
 
-    if (options.keepAlive && tab.alive) {
+    const wasAlive = options.keepAlive && tab.alive
+
+    if (wasAlive) {
       tab.alive = false
       await nextTick()
+    }
+
+    tab.renderKey = (tab.renderKey ?? 0) + 1
+
+    if (wasAlive) {
       tab.alive = true
       await nextTick()
     }

@@ -149,7 +149,8 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
           tips: tab.tips,
           icon: tab.icon,
           tabClass: tab.tabClass,
-          closable: tab.closable
+          closable: tab.closable,
+          renderKey: tab.renderKey
         })),
         active: ctrl.activeId.value
       }),

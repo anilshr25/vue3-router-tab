@@ -101,6 +101,24 @@ const routes = [
         },
       },
       {
+        path: '/transition-demo',
+        name: 'TransitionDemo',
+        component: () => import('./views/TransitionDemo.vue'),
+        meta: {
+          title: 'Transition Effects',
+          icon: 'mdi-animation-play',
+        },
+      },
+      {
+        path: '/title-test',
+        name: 'TitleTest',
+        component: () => import('./views/TitleTestDemo.vue'),
+        meta: {
+          title: 'Title Test',
+          icon: 'mdi-format-title',
+        },
+      },
+      {
         path: '/:pathMatch(.*)*',
         name: 'NotFound',
         component: () => import('./views/NotFound.vue'),

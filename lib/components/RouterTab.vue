@@ -76,7 +76,7 @@
               <component
                 v-if="!isRefreshing(routerSlot.route)"
                 :is="routerSlot.Component"
-                :key="controller.getRouteKey(routerSlot.route)"
+                :key="getComponentCacheKey(routerSlot.route)"
                 :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(routerSlot.route))"
                 class="router-tab-page"
               />
@@ -90,7 +90,7 @@
             <component
               v-if="!controller.options.keepAlive || isRefreshing(routerSlot.route)"
               :is="routerSlot.Component"
-              :key="controller.getRouteKey(routerSlot.route) + (isRefreshing(routerSlot.route) ? '-refresh' : '')"
+              :key="getRefreshComponentKey(routerSlot.route)"
               :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(routerSlot.route))"
               class="router-tab-page"
             />
@@ -716,6 +716,17 @@ export default defineComponent({
       return reactiveTitles[tab.id] || getTabTitle(tab)
     }
 
+    function getComponentCacheKey(route: RouteLocationNormalizedLoaded): string {
+      const routeKey = controller.getRouteKey(route)
+      const tab = controller.tabs.find(item => item.id === routeKey)
+      const renderKey = tab?.renderKey ?? 0
+      return `${routeKey}::${renderKey}`
+    }
+
+    function getRefreshComponentKey(route: RouteLocationNormalizedLoaded): string {
+      return `${getComponentCacheKey(route)}::refresh`
+    }
+
     function isClosable(tab: TabRecord) {
       if (tab.closable === false) return false
       if (controller.options.keepLastTab && controller.tabs.length <= 1) return false
@@ -910,6 +921,8 @@ export default defineComponent({
       cleanupComponentWatching,
       handleComponentRef,
       getReactiveTabTitle,
+      getComponentCacheKey,
+      getRefreshComponentKey,
       triggerTabUpdate,
       menuRef,
       highlightedIndex,
