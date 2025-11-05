@@ -105,6 +105,14 @@ function insertTab(tabs: TabRecord[], tab: TabRecord, position: 'last' | 'next',
   const exists = tabs.find(item => item.id === tab.id)
   if (exists) return
 
+  if (position === 'next' && referenceId) {
+    const referenceIndex = tabs.findIndex(item => item.id === referenceId)
+    if (referenceIndex !== -1) {
+      tabs.splice(referenceIndex + 1, 0, tab)
+      return
+    }
+  }
+
   tabs.push(tab)
 }
 
@@ -259,6 +267,16 @@ export function createRouterTabs(
 
   async function refreshTab(id: string | undefined = activeId.value ?? undefined, force = false) {
     if (!id) return
+    const tab = tabs.find(item => item.id === id)
+    if (!tab) return
+
+    if (options.keepAlive && tab.alive) {
+      tab.alive = false
+      await nextTick()
+      tab.alive = true
+      await nextTick()
+    }
+
     refreshingKey.value = id
     await nextTick()
     if (!force) await nextTick()

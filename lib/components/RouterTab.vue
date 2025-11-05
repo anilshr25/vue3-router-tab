@@ -1,7 +1,10 @@
 <template>
   <div class="router-tab">
     <header class="router-tab__header">
-      <div class="router-tab__slot-start">
+      <div
+        class="router-tab__slot-start"
+        :class="{ 'has-content': hasStartSlot }"
+      >
         <slot name="start" />
       </div>
 
@@ -40,7 +43,10 @@
         </transition-group>
       </div>
 
-      <div class="router-tab__slot-end">
+      <div
+        class="router-tab__slot-end"
+        :class="{ 'has-content': hasEndSlot }"
+      >
         <slot name="end" />
       </div>
     </header>
@@ -95,18 +101,26 @@
 
     <div
       v-if="context.visible && context.target"
+      ref="menuRef"
       class="router-tab__contextmenu"
+      role="menu"
+      @keydown="onMenuKeydown"
       :style="{ left: context.position.x + 'px', top: context.position.y + 'px' }"
     >
       <a
-        v-for="item in menuItems"
+        v-for="(item, index) in menuItems"
         :key="item.id"
-        class="router-tab__contextmenu-item"
+        role="menuitem"
+        :class="['router-tab__contextmenu-item', { 'is-focused': index === highlightedIndex }]"
         :aria-disabled="item.disabled"
-        @click.prevent="handleMenuAction(item)"
+        :disabled="item.disabled"
+        :tabindex="item.disabled ? -1 : index === highlightedIndex ? 0 : -1"
+        :ref="el => setMenuItemRef(el, index)"
+        @mouseenter="!item.disabled && highlightMenuIndex(index)"
+        @click="handleMenuAction(item)"
       >
         {{ item.label }}
-      </a>
+  </a>
     </div>
   </div>
 </template>
@@ -116,6 +130,7 @@ import {
   computed,
   defineComponent,
   getCurrentInstance,
+  nextTick,
   onBeforeUnmount,
   onMounted,
   provide,
@@ -226,6 +241,8 @@ export default defineComponent({
     instance.appContext.config.globalProperties.$tabs = controller
 
     const hasCustomSlot = computed(() => Boolean(instance?.slots?.default))
+    const hasStartSlot = computed(() => Boolean(instance?.slots?.start))
+    const hasEndSlot = computed(() => Boolean(instance?.slots?.end))
 
     // Force reactivity by creating a trigger ref
     const tabUpdateTrigger = ref(0)
@@ -390,6 +407,10 @@ export default defineComponent({
       position: { x: 0, y: 0 }
     })
 
+    const menuRef = ref<HTMLElement | null>(null)
+    const menuItemRefs = ref<(HTMLElement | null)[]>([])
+    const highlightedIndex = ref(-1)
+
     // Drag and drop state
     const dragState = reactive({
       dragging: false,
@@ -500,6 +521,8 @@ export default defineComponent({
     function hideContextMenu() {
       context.visible = false
       context.target = null
+      highlightedIndex.value = -1
+      menuItemRefs.value = []
     }
 
     function showContextMenu(tab: TabRecord, event: MouseEvent) {
@@ -510,6 +533,9 @@ export default defineComponent({
       context.position.y = event.clientY
 
       document.addEventListener('click', hideContextMenu, { once: true })
+      nextTick(() => {
+        adjustMenuPosition()
+      })
     }
 
     function normalizeMenuItem(raw: MenuConfig, ctx: MenuActionContext): ResolvedMenuItem | null {
@@ -549,6 +575,128 @@ export default defineComponent({
         .filter((item): item is ResolvedMenuItem => !!item)
     })
 
+    function adjustMenuPosition() {
+      const menuEl = menuRef.value
+      if (!menuEl) return
+      const margin = 8
+      const { innerWidth, innerHeight } = window
+      const rect = menuEl.getBoundingClientRect()
+
+      let nextX = context.position.x
+      let nextY = context.position.y
+
+      if (rect.right > innerWidth - margin) {
+        nextX = Math.max(margin, innerWidth - rect.width - margin)
+      }
+
+      if (rect.bottom > innerHeight - margin) {
+        nextY = Math.max(margin, innerHeight - rect.height - margin)
+      }
+
+      if (nextX !== context.position.x || nextY !== context.position.y) {
+        context.position.x = nextX
+        context.position.y = nextY
+      }
+    }
+
+    function setMenuItemRef(el: Element | null, index: number) {
+      menuItemRefs.value[index] = (el as HTMLElement) ?? null
+    }
+
+    function focusMenuItem(index: number) {
+      if (index < 0) return
+      const el = menuItemRefs.value[index]
+      el?.focus({ preventScroll: true })
+    }
+
+    function findNextEnabledIndex(start: number, step: 1 | -1, items = menuItems.value): number {
+      if (!items.length) return -1
+      const total = items.length
+      let idx = start
+
+      for (let i = 0; i < total; i++) {
+        idx = (idx + step + total) % total
+        if (!items[idx].disabled) return idx
+      }
+
+      return -1
+    }
+
+    function highlightMenuIndex(index: number) {
+      highlightedIndex.value = index
+      if (index < 0) return
+      nextTick(() => focusMenuItem(index))
+    }
+
+    function moveHighlight(step: 1 | -1) {
+      const nextIndex = findNextEnabledIndex(highlightedIndex.value, step)
+      if (nextIndex !== -1) {
+        highlightMenuIndex(nextIndex)
+      }
+    }
+
+    function onMenuKeydown(event: KeyboardEvent) {
+      if (!context.visible) return
+
+      const key = event.key
+      const items = menuItems.value
+      if (!items.length) return
+
+      if (key === 'Tab') {
+        hideContextMenu()
+        return
+      }
+
+      const handledKeys = [
+        'ArrowDown',
+        'ArrowUp',
+        'ArrowRight',
+        'ArrowLeft',
+        'Home',
+        'End',
+        'Enter',
+        ' ',
+        'Spacebar',
+        'Escape'
+      ]
+
+      if (!handledKeys.includes(key)) return
+
+      event.preventDefault()
+
+      switch (key) {
+        case 'ArrowDown':
+        case 'ArrowRight':
+          moveHighlight(1)
+          break
+        case 'ArrowUp':
+        case 'ArrowLeft':
+          moveHighlight(-1)
+          break
+        case 'Home':
+          highlightMenuIndex(findNextEnabledIndex(-1, 1))
+          break
+        case 'End':
+          highlightMenuIndex(findNextEnabledIndex(items.length, -1))
+          break
+        case 'Enter':
+        case ' ':
+        case 'Spacebar': {
+          const index = highlightedIndex.value
+          if (index > -1) {
+            const item = items[index]
+            if (!item.disabled) {
+              handleMenuAction(item)
+            }
+          }
+          break
+        }
+        case 'Escape':
+          hideContextMenu()
+          break
+      }
+    }
+
     async function handleMenuAction(item: ResolvedMenuItem) {
       if (item.disabled) return
       hideContextMenu()
@@ -579,6 +727,15 @@ export default defineComponent({
     }
 
     function activate(tab: TabRecord) {
+      if (tab.href && typeof window !== 'undefined') {
+        if (tab.target && tab.target !== '_self') {
+          window.open(tab.href as string, tab.target)
+        } else {
+          window.location.assign(tab.href as string)
+        }
+        return
+      }
+
       if (controller.activeId.value === tab.id) return
       controller.openTab(tab.to, false)
     }
@@ -704,6 +861,23 @@ export default defineComponent({
       }
     )
 
+    watch(menuItems, items => {
+      menuItemRefs.value = new Array(items.length).fill(null)
+      if (!context.visible) return
+      const first = findNextEnabledIndex(-1, 1, items)
+      highlightMenuIndex(first)
+    })
+
+    watch(
+      () => context.visible,
+      visible => {
+        if (!visible) {
+          highlightedIndex.value = -1
+          menuItemRefs.value = []
+        }
+      }
+    )
+
     const includeKeys = controller.includeKeys
 
     return {
@@ -724,6 +898,8 @@ export default defineComponent({
       isClosable,
       isRefreshing,
       hasCustomSlot,
+      hasStartSlot,
+      hasEndSlot,
       onDragStart,
       onDragOver,
       onDragEnter,
@@ -734,7 +910,12 @@ export default defineComponent({
       cleanupComponentWatching,
       handleComponentRef,
       getReactiveTabTitle,
-      triggerTabUpdate
+      triggerTabUpdate,
+      menuRef,
+      highlightedIndex,
+      setMenuItemRef,
+      onMenuKeydown,
+      highlightMenuIndex
     }
   }
 })

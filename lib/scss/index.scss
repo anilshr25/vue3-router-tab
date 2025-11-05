@@ -23,7 +23,23 @@
   --router-tab-active-background: #{$router-tab-primary};
   --router-tab-active-text: #ffffff;
   --router-tab-active-border: #{$router-tab-primary};
-  --router-tab-icon-color: #475569;
+  --router-tab-icon-color: #{$router-tab-icon-color-light};
+  --router-tab-button-background: #{$router-tab-button-bg-light};
+  --router-tab-button-color: #{$router-tab-button-color-light};
+  --router-tab-active-button-background: #{$router-tab-active-button-bg-light};
+  --router-tab-active-button-color: #{$router-tab-active-button-color-light};
+}
+
+:root[data-theme="dark"] {
+  --router-tab-background: #{$router-tab-bg-dark};
+  --router-tab-text: #{$router-tab-text-dark};
+  --router-tab-border: #{$router-tab-border-dark};
+  --router-tab-header-bg: #{$router-tab-bg-dark};
+  --router-tab-icon-color: #{$router-tab-icon-color-dark};
+  --router-tab-button-background: #{$router-tab-button-bg-dark};
+  --router-tab-button-color: #{$router-tab-button-color-dark};
+  --router-tab-active-button-background: #{$router-tab-active-button-bg-dark};
+  --router-tab-active-button-color: #{$router-tab-active-button-color-dark};
 }
 
 // =============================================================================
@@ -99,6 +115,7 @@
     cursor: pointer;
     user-select: none;
     transition: var(--router-tab-transition);
+    will-change: background-color, color;
 
     &:first-child {
       border-left: 1px solid var(--router-tab-border);
@@ -165,7 +182,7 @@
       overflow: hidden;
       border: none;
       border-radius: 50%;
-      background: var(--router-tab-button-bg);
+      background: var(--router-tab-button-background);
       color: var(--router-tab-button-color);
       cursor: pointer;
       transition: var(--router-tab-transition);
@@ -188,7 +205,7 @@
       &::after { transform: translateY(-50%) rotate(45deg); }
 
       &:hover {
-        background: var(--router-tab-active-button-bg);
+        background: var(--router-tab-active-button-background);
         color: var(--router-tab-active-button-color);
       }
     }
@@ -196,14 +213,20 @@
     // Show close button on hover/active
     &:hover,
     &.is-active {
-      &.is-closable {
-        padding-right: calc(var(--router-tab-padding) - #{($router-tab-close-icon-size + $router-tab-close-icon-margin) * 0.5});
-      }
 
       .router-tab__item-close {
         width: $router-tab-close-icon-size;
         margin-left: $router-tab-close-icon-margin;
       }
+    }
+
+    &.is-dragging {
+      opacity: $router-tab-drag-opacity;
+      cursor: $router-tab-drag-cursor;
+    }
+
+    &.is-drag-over {
+      background-color: color-mix(in srgb, var(--router-tab-primary) 12%, transparent);
     }
   }
 
@@ -217,7 +240,29 @@
 .router-tab__container {
   padding: 10px;
   border: 1px solid var(--router-tab-border);
+  transition: var(--router-tab-transition);
+  will-change: background-color, border-color;
 }
+
+.router-tab__slot-start,
+.router-tab__slot-end {
+  display: none;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.5rem;
+  height: 100%;
+}
+
+.router-tab__slot-start.has-content {
+  display: flex;
+  border-right: 1px solid var(--router-tab-border);
+}
+
+.router-tab__slot-end.has-content {
+  display: flex;
+  border-left: 1px solid var(--router-tab-border);
+}
+
 // Context Menu using button colors
 .router-tab__contextmenu {
   position: fixed;
@@ -237,13 +282,14 @@
     line-height: $router-tab-contextmenu-item-height;
     text-align: left;
     text-decoration: none;
-    background: var(--router-tab-button-bg);
+    background: var(--router-tab-button-background);
     border: none;
     color: var(--router-tab-button-color);
     cursor: pointer;
     font: inherit;
     border-radius: calc(#{$router-tab-contextmenu-border-radius} - 4px);
     transition: all 0.2s ease-in-out;
+    outline: none;
 
     &[aria-disabled="true"] {
       color: color-mix(in srgb, var(--router-tab-text) 40%);
@@ -251,9 +297,15 @@
       cursor: not-allowed;
     }
 
-    &:hover:not([aria-disabled="true"]),
+    &:focus,
     &:focus-visible {
-      background: var(--router-tab-active-button-bg);
+      outline: none;
+    }
+
+    &:hover:not([aria-disabled="true"]),
+    &:focus-visible,
+    &.is-focused {
+      background: var(--router-tab-active-button-background);
       color: var(--router-tab-active-button-color);
     }
   }

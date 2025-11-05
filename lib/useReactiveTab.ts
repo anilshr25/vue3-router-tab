@@ -1,4 +1,11 @@
-import { ref, computed, type Ref, type ComputedRef } from 'vue'
+import {
+  ref,
+  computed,
+  isRef,
+  isReadonly,
+  type Ref,
+  type ComputedRef
+} from 'vue'
 
 export interface ReactiveTabState {
   title?: string | Ref<string> | ComputedRef<string>
@@ -22,64 +29,56 @@ export interface ReactiveTabReturn {
  * Composable for managing reactive tab properties
  * RouterTab will automatically watch these properties and update the tab accordingly
  */
-export function useReactiveTab(initialState: ReactiveTabState = {}): ReactiveTabReturn {
-  // Create reactive references
-  const tabTitle = ref(initialState.title || 'Untitled')
-  const tabIcon = ref(initialState.icon || 'mdi-tab')
-  const tabClosable = ref(initialState.closable !== false)
-  const tabMeta = ref(initialState.meta || {})
-
-  // Convert to computed if needed
-  const routeTabTitle = typeof initialState.title === 'function' 
-    ? computed(initialState.title as () => string)
-    : tabTitle
-    
-  const routeTabIcon = typeof initialState.icon === 'function'
-    ? computed(initialState.icon as () => string)
-    : tabIcon
-    
-  const routeTabClosable = typeof initialState.closable === 'function'
-    ? computed(initialState.closable as () => boolean)
-    : tabClosable
-    
-  const routeTabMeta = typeof initialState.meta === 'function'
-    ? computed(initialState.meta as () => any)
-    : tabMeta
-
-  // Update functions
-  const updateTitle = (title: string) => {
-    if ('value' in tabTitle) {
-      tabTitle.value = title
+function resolveReactiveProp<T>(
+  source: T | Ref<T> | ComputedRef<T> | (() => T) | undefined,
+  fallback: T
+): {
+  value: Ref<T> | ComputedRef<T>
+  update: (value: T) => void
+} {
+  if (isRef(source)) {
+    const writable = !isReadonly(source)
+    return {
+      value: source,
+      update: writable ? (value: T) => { (source as Ref<T>).value = value } : () => {}
     }
   }
 
-  const updateIcon = (icon: string) => {
-    if ('value' in tabIcon) {
-      tabIcon.value = icon
+  if (typeof source === 'function') {
+    const getter = source as () => T
+    return {
+      value: computed(getter),
+      update: () => {}
     }
   }
 
-  const updateClosable = (closable: boolean) => {
-    if ('value' in tabClosable) {
-      tabClosable.value = closable
-    }
-  }
-
-  const updateMeta = (meta: any) => {
-    if ('value' in tabMeta) {
-      tabMeta.value = meta
-    }
-  }
+  const state = ref(
+    (source === undefined ? fallback : source) as T
+  ) as Ref<T>
 
   return {
-    routeTabTitle,
-    routeTabIcon,
-    routeTabClosable,
-    routeTabMeta,
-    updateTitle,
-    updateIcon,
-    updateClosable,
-    updateMeta
+    value: state,
+    update: (value: T) => {
+      state.value = value
+    }
+  }
+}
+
+export function useReactiveTab(initialState: ReactiveTabState = {}): ReactiveTabReturn {
+  const title = resolveReactiveProp(initialState.title, 'Untitled')
+  const icon = resolveReactiveProp(initialState.icon, '')
+  const closable = resolveReactiveProp(initialState.closable, true)
+  const meta = resolveReactiveProp(initialState.meta, {})
+
+  return {
+    routeTabTitle: title.value,
+    routeTabIcon: icon.value,
+    routeTabClosable: closable.value,
+    routeTabMeta: meta.value,
+    updateTitle: title.update,
+    updateIcon: icon.update,
+    updateClosable: closable.update,
+    updateMeta: meta.update
   }
 }
 
@@ -128,3 +127,4 @@ export function useStatusTab(
     closable: computed(() => status.value !== 'loading')
   })
 }
+
