@@ -166,7 +166,7 @@ export function createRouterTabs(
   const includeKeys = computed(() =>
     tabs
       .filter(tab => tab.alive)
-      .map(tab => `${tab.id}::${tab.renderKey}`)
+      .map(tab => `${tab.id}::${tab.renderKey ?? 0}`)
   )
 
   let isHydrating = false
@@ -196,6 +196,10 @@ export function createRouterTabs(
       tab.matched = route
       tab.alive = resolveAlive(route, options.keepAlive)
       tab.reusable = resolveReusable(route, tab.reusable)
+      // Ensure renderKey is initialized
+      if (typeof tab.renderKey !== 'number') {
+        tab.renderKey = 0
+      }
       Object.assign(tab, pickMeta(route))
       return tab
     }
@@ -281,20 +285,30 @@ export function createRouterTabs(
 
     const wasAlive = options.keepAlive && tab.alive
 
+    // Remove from KeepAlive cache if it was alive
     if (wasAlive) {
       tab.alive = false
       await nextTick()
     }
 
+    // Increment render key to force re-render
     tab.renderKey = (tab.renderKey ?? 0) + 1
 
+    // Restore to KeepAlive cache
     if (wasAlive) {
       tab.alive = true
-      await nextTick()
     }
 
+    // Set refreshing state to trigger component unmount with transition
     refreshingKey.value = id
     await nextTick()
+    
+    // Wait for unmount transition and new component mount
+    if (!force) {
+      await nextTick()
+    }
+    
+    // Clear refreshing state to show the new component
     refreshingKey.value = null
   }
 

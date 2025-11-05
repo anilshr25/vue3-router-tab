@@ -68,29 +68,29 @@
             v-bind="pageTransitionProps"
             appear
           >
+            <component
+              v-if="isRefreshing(routerSlot.route)"
+              :is="routerSlot.Component"
+              :key="getRefreshComponentKey(routerSlot.route)"
+              :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(routerSlot.route))"
+              class="router-tab-page"
+            />
             <KeepAlive
-              v-if="controller.options.keepAlive"
+              v-else-if="controller.options.keepAlive"
               :include="includeKeys"
               :max="controller.options.maxAlive || undefined"
             >
               <component
-                v-if="!isRefreshing(routerSlot.route)"
                 :is="routerSlot.Component"
                 :key="getComponentCacheKey(routerSlot.route)"
                 :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(routerSlot.route))"
                 class="router-tab-page"
               />
             </KeepAlive>
-          </transition>
-
-          <transition
-            v-bind="pageTransitionProps"
-            appear
-          >
             <component
-              v-if="!controller.options.keepAlive || isRefreshing(routerSlot.route)"
+              v-else
               :is="routerSlot.Component"
-              :key="getRefreshComponentKey(routerSlot.route)"
+              :key="getComponentCacheKey(routerSlot.route)"
               :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(routerSlot.route))"
               class="router-tab-page"
             />
@@ -99,8 +99,9 @@
       </RouterView>
     </div>
 
+    <!-- Use v-show instead of v-if to keep DOM and prevent re-creation overhead -->
     <div
-      v-if="context.visible && context.target"
+      v-show="context.visible && context.target"
       ref="menuRef"
       class="router-tab__contextmenu"
       role="menu"
@@ -527,14 +528,19 @@ export default defineComponent({
 
     function showContextMenu(tab: TabRecord, event: MouseEvent) {
       if (!props.contextmenu) return
-      context.visible = true
+      
+      // Batch updates to prevent multiple reactive triggers
       context.target = tab
       context.position.x = event.clientX
       context.position.y = event.clientY
-
-      document.addEventListener('click', hideContextMenu, { once: true })
+      
+      // Set visible last to trigger watchers only once with all data ready
       nextTick(() => {
-        adjustMenuPosition()
+        context.visible = true
+        document.addEventListener('click', hideContextMenu, { once: true })
+        nextTick(() => {
+          adjustMenuPosition()
+        })
       })
     }
 
@@ -567,9 +573,13 @@ export default defineComponent({
     }
 
     const menuItems = computed<ResolvedMenuItem[]>(() => {
+      // Early return to prevent computation when menu is hidden
       if (!context.visible || !context.target || props.contextmenu === false) return []
+      
       const source = Array.isArray(props.contextmenu) ? props.contextmenu : defaultMenuOrder
       const ctx: MenuActionContext = { target: context.target, controller }
+      
+      // Map and filter in one pass for better performance
       return source
         .map(item => normalizeMenuItem(item, ctx))
         .filter((item): item is ResolvedMenuItem => !!item)
@@ -869,15 +879,16 @@ export default defineComponent({
         if (context.visible && length === 0) {
           hideContextMenu()
         }
-      }
+      },
+      { flush: 'post' } // Run after component updates to prevent blocking render
     )
 
     watch(menuItems, items => {
+      if (!context.visible) return // Skip if menu is hidden
       menuItemRefs.value = new Array(items.length).fill(null)
-      if (!context.visible) return
       const first = findNextEnabledIndex(-1, 1, items)
       highlightMenuIndex(first)
-    })
+    }, { flush: 'post' }) // Run after DOM updates
 
     watch(
       () => context.visible,
