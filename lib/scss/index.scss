@@ -12,6 +12,34 @@
   --router-tab-header-height: #{$router-tab-header-height};
   --router-tab-padding: #{$router-tab-padding};
   --router-tab-font-size: #{$router-tab-font-size};
+  --router-tab-transition: #{$router-tab-transition};
+  
+  // Colors (will be overridden by theme system)
+  --router-tab-primary: #{$router-tab-primary};
+  --router-tab-background: #{$router-tab-bg-light};
+  --router-tab-text: #{$router-tab-text-light};
+  --router-tab-border: #{$router-tab-border-light};
+  --router-tab-header-bg: #{$router-tab-bg-light};
+  --router-tab-active-background: #{$router-tab-primary};
+  --router-tab-active-text: #ffffff;
+  --router-tab-active-border: #{$router-tab-primary};
+  --router-tab-icon-color: #{$router-tab-icon-color-light};
+  --router-tab-button-background: #{$router-tab-button-bg-light};
+  --router-tab-button-color: #{$router-tab-button-color-light};
+  --router-tab-active-button-background: #{$router-tab-active-button-bg-light};
+  --router-tab-active-button-color: #{$router-tab-active-button-color-light};
+}
+
+:root[data-theme="dark"] {
+  --router-tab-background: #{$router-tab-bg-dark};
+  --router-tab-text: #{$router-tab-text-dark};
+  --router-tab-border: #{$router-tab-border-dark};
+  --router-tab-header-bg: #{$router-tab-bg-dark};
+  --router-tab-icon-color: #{$router-tab-icon-color-dark};
+  --router-tab-button-background: #{$router-tab-button-bg-dark};
+  --router-tab-button-color: #{$router-tab-button-color-dark};
+  --router-tab-active-button-background: #{$router-tab-active-button-bg-dark};
+  --router-tab-active-button-color: #{$router-tab-active-button-color-dark};
 }
 
 // =============================================================================
@@ -87,6 +115,7 @@
     cursor: pointer;
     user-select: none;
     transition: var(--router-tab-transition);
+    will-change: background-color, color;
 
     &:first-child {
       border-left: 1px solid var(--router-tab-border);
@@ -153,7 +182,7 @@
       overflow: hidden;
       border: none;
       border-radius: 50%;
-      background: var(--router-tab-button-bg);
+      background: var(--router-tab-button-background);
       color: var(--router-tab-button-color);
       cursor: pointer;
       transition: var(--router-tab-transition);
@@ -176,7 +205,7 @@
       &::after { transform: translateY(-50%) rotate(45deg); }
 
       &:hover {
-        background: var(--router-tab-active-button-bg);
+        background: var(--router-tab-active-button-background);
         color: var(--router-tab-active-button-color);
       }
     }
@@ -184,14 +213,20 @@
     // Show close button on hover/active
     &:hover,
     &.is-active {
-      &.is-closable {
-        padding-right: calc(var(--router-tab-padding) - #{($router-tab-close-icon-size + $router-tab-close-icon-margin) * 0.5});
-      }
 
       .router-tab__item-close {
         width: $router-tab-close-icon-size;
         margin-left: $router-tab-close-icon-margin;
       }
+    }
+
+    &.is-dragging {
+      opacity: $router-tab-drag-opacity;
+      cursor: $router-tab-drag-cursor;
+    }
+
+    &.is-drag-over {
+      background-color: color-mix(in srgb, var(--router-tab-primary) 12%, transparent);
     }
   }
 
@@ -205,7 +240,29 @@
 .router-tab__container {
   padding: 10px;
   border: 1px solid var(--router-tab-border);
+  transition: var(--router-tab-transition);
+  will-change: background-color, border-color;
 }
+
+.router-tab__slot-start,
+.router-tab__slot-end {
+  display: none;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.5rem;
+  height: 100%;
+}
+
+.router-tab__slot-start.has-content {
+  display: flex;
+  border-right: 1px solid var(--router-tab-border);
+}
+
+.router-tab__slot-end.has-content {
+  display: flex;
+  border-left: 1px solid var(--router-tab-border);
+}
+
 // Context Menu using button colors
 .router-tab__contextmenu {
   position: fixed;
@@ -225,13 +282,14 @@
     line-height: $router-tab-contextmenu-item-height;
     text-align: left;
     text-decoration: none;
-    background: var(--router-tab-button-bg);
+    background: var(--router-tab-button-background);
     border: none;
     color: var(--router-tab-button-color);
     cursor: pointer;
     font: inherit;
     border-radius: calc(#{$router-tab-contextmenu-border-radius} - 4px);
     transition: all 0.2s ease-in-out;
+    outline: none;
 
     &[aria-disabled="true"] {
       color: color-mix(in srgb, var(--router-tab-text) 40%);
@@ -239,10 +297,264 @@
       cursor: not-allowed;
     }
 
-    &:hover:not([aria-disabled="true"]),
+    &:focus,
     &:focus-visible {
-      background: var(--router-tab-active-button-bg);
+      outline: none;
+    }
+
+    &:hover:not([aria-disabled="true"]),
+    &:focus-visible,
+    &.is-focused {
+      background: var(--router-tab-active-button-background);
       color: var(--router-tab-active-button-color);
     }
+  }
+}
+
+// =============================================================================
+// Transition Presets
+// =============================================================================
+
+// Tab list animation (used for transition-group on nav items)
+.router-tab-zoom-enter-active,
+.router-tab-zoom-leave-active {
+  transition:
+    transform $router-tab-transition-fast,
+    opacity $router-tab-transition-fast;
+}
+
+.router-tab-zoom-enter-from,
+.router-tab-zoom-leave-to {
+  transform: scale(0.9);
+  opacity: 0;
+}
+
+.router-tab-zoom-enter-to,
+.router-tab-zoom-leave-from {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.router-tab-zoom-move {
+  transition: transform $router-tab-transition-fast;
+}
+
+// Page swap animation (default for routed content)
+.router-tab-swap-enter-active,
+.router-tab-swap-leave-active {
+  position: relative;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+  will-change: opacity, transform;
+}
+
+.router-tab-swap-enter-from {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.router-tab-swap-enter-to {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.router-tab-swap-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.router-tab-swap-leave-to {
+  opacity: 0;
+  transform: translateY(-15px);
+}
+
+// =============================================================================
+// Additional Page Transition Effects
+// =============================================================================
+
+// Slide transition - slides horizontally
+.router-tab-slide-enter-active,
+.router-tab-slide-leave-active {
+  position: relative;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+  will-change: opacity, transform;
+}
+
+.router-tab-slide-enter-from {
+  opacity: 0;
+  transform: translateX(80px);
+}
+
+.router-tab-slide-enter-to {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.router-tab-slide-leave-from {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.router-tab-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-80px);
+}
+
+// Fade transition - smooth fade in and out
+.router-tab-fade-enter-active {
+  transition: opacity 0.4s ease-in;
+  will-change: opacity;
+}
+
+.router-tab-fade-leave-active {
+  transition: opacity 0.3s ease-out;
+  will-change: opacity;
+}
+
+.router-tab-fade-enter-from {
+  opacity: 0;
+}
+
+.router-tab-fade-enter-to {
+  opacity: 1;
+}
+
+.router-tab-fade-leave-from {
+  opacity: 1;
+}
+
+.router-tab-fade-leave-to {
+  opacity: 0;
+}
+
+// Scale transition - zoom in/out effect
+.router-tab-scale-enter-active,
+.router-tab-scale-leave-active {
+  position: relative;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: opacity, transform;
+}
+
+.router-tab-scale-enter-from {
+  opacity: 0;
+  transform: scale(0.7);
+}
+
+.router-tab-scale-enter-to {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.router-tab-scale-leave-from {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.router-tab-scale-leave-to {
+  opacity: 0;
+  transform: scale(1.2);
+}
+
+// Flip transition - 3D flip effect
+.router-tab-flip-enter-active,
+.router-tab-flip-leave-active {
+  position: relative;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
+  transform-style: preserve-3d;
+  will-change: opacity, transform;
+}
+
+.router-tab-flip-enter-from {
+  opacity: 0;
+  transform: rotateX(-90deg);
+}
+
+.router-tab-flip-enter-to {
+  opacity: 1;
+  transform: rotateX(0);
+}
+
+.router-tab-flip-leave-from {
+  opacity: 1;
+  transform: rotateX(0);
+}
+
+.router-tab-flip-leave-to {
+  opacity: 0;
+  transform: rotateX(90deg);
+}
+
+// Rotate transition - rotate and fade
+.router-tab-rotate-enter-active,
+.router-tab-rotate-leave-active {
+  position: relative;
+  transition:
+    opacity 0.20s ease,
+    transform 0.20s ease;
+  will-change: opacity, transform;
+}
+
+.router-tab-rotate-enter-from {
+  opacity: 0;
+  transform: rotate(-8deg) scale(0.85);
+}
+
+.router-tab-rotate-enter-to {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+
+.router-tab-rotate-leave-from {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+
+.router-tab-rotate-leave-to {
+  opacity: 0;
+  transform: rotate(8deg) scale(0.85);
+}
+
+// Bounce transition - elastic bounce effect
+.router-tab-bounce-enter-active {
+  animation: router-tab-bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.router-tab-bounce-leave-active {
+  animation: router-tab-bounce-out 0.3s ease-in;
+}
+
+@keyframes router-tab-bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) translateY(-80px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes router-tab-bounce-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.7) translateY(30px);
   }
 }

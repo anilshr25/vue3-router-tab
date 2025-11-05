@@ -1,6 +1,6 @@
 {
   "name": "vue3-router-tab",
-  "version": "1.2.5",
+  "version": "1.3.4",
   "type": "module",
   "files": [
     "dist",
@@ -20,7 +20,8 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "vite build"
+    "build": "vite build",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
@@ -46,7 +47,11 @@
   ],
   "license": "MIT",
   "homepage": "https://github.com/anilshr25/vue3-router-tab/#readme",
-  "description": "Simple Confirm Dialog verification plugin with Vue 3.",
+  "description": "Vue 3 Router Tabs component: tabbed navigation for Vue Router with persistence, context menu, drag-and-drop reordering, theming, and reactive page-driven tab titles.",
+  "sideEffects": [
+    "dist/vue3-router-tab.css",
+    "lib/scss/index.scss"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/anilshr25/vue3-router-tab.git"

@@ -2,7 +2,13 @@
   <div>
     <v-row>
       <v-col cols="12">
-        <h1 class="text-h4 font-weight-bold mb-4">Users Management</h1>
+        <div class="d-flex align-center justify-space-between mb-4">
+          <h1 class="text-h4 font-weight-bold">Users Management</h1>
+          <v-chip color="primary" variant="flat" class="reload-indicator">
+            <v-icon start>mdi-clock-outline</v-icon>
+            {{ mountTime }}
+          </v-chip>
+        </div>
       </v-col>
 
       <v-col cols="12">
@@ -41,6 +47,16 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+
+const mountTime = ref('')
+
+onMounted(() => {
+  const now = new Date()
+  mountTime.value = now.toLocaleTimeString()
+  console.log('🔄 Users page mounted at:', mountTime.value)
+})
+
 const headers = [
   { title: 'Name', key: 'name' },
   { title: 'Email', key: 'email' },
@@ -55,3 +71,20 @@ const users = [
   { name: 'Bob Johnson', email: 'bob@example.com', role: 'User', status: 'Inactive' },
 ]
 </script>
+
+<style scoped>
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.reload-indicator {
+  animation: slideIn 0.4s ease-out;
+}
+</style>

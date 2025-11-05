@@ -129,12 +129,32 @@
     <!-- Main Content -->
     <v-main>
       <v-container fluid>
+        <!-- Transition Selector -->
+        <v-card class="mb-4" elevation="1">
+          <v-card-text class="d-flex align-center gap-3 py-2">
+            <v-icon>mdi-animation-play</v-icon>
+            <span class="font-weight-medium">Page Transition:</span>
+            <v-chip-group
+              v-model="selectedTransition"
+              selected-class="bg-primary"
+              mandatory
+            >
+              <v-chip value="router-tab-swap" size="small">Swap</v-chip>
+              <v-chip value="router-tab-slide" size="small">Slide</v-chip>
+              <v-chip value="router-tab-fade" size="small">Fade</v-chip>
+              <v-chip value="router-tab-scale" size="small">Scale</v-chip>
+              <v-chip value="router-tab-flip" size="small">Flip</v-chip>
+              <v-chip value="router-tab-rotate" size="small">Rotate</v-chip>
+              <v-chip value="router-tab-bounce" size="small">Bounce</v-chip>
+            </v-chip-group>
+          </v-card-text>
+        </v-card>
+
         <slot name="content">
-          <router-tab v-slot="{ Component }">
-            <transition name="fade" mode="out-in">
-              <component :is="Component" />
-            </transition>
-          </router-tab>
+          <router-tab 
+            cookie-key="example-app-tabs"
+            :page-transition="{ name: selectedTransition, mode: 'out-in' }"
+          />
         </slot>
       </v-container>
     </v-main>
@@ -207,6 +227,12 @@ const props = withDefaults(defineProps<Props>(), {
     { title: 'Orders', icon: 'mdi-cart', to: '/orders', badge: '5' },
     { title: 'Analytics', icon: 'mdi-chart-line', to: '/analytics' },
     { title: 'Settings', icon: 'mdi-cog', to: '/settings' },
+    { title: 'Debug Test', icon: 'mdi-bug-outline', to: '/debug-test' },
+    { title: 'Simple Test', icon: 'mdi-test-tube-empty', to: '/simple-test' },
+    { title: 'Ds Demo', icon: 'mdi-test-tube', to: '/test-untitled' },
+    { title: 'Advanced Demo', icon: 'mdi-rocket', to: '/advanced-demo' },
+    { title: 'Composable Demo', icon: 'mdi-puzzle', to: '/composable-demo' },
+    { title: 'Simple Test', icon: 'mdi-flask', to: '/simple-test' },
   ],
 })
 
@@ -223,6 +249,7 @@ const route = useRoute()
 // State
 const drawer = ref(props.initialDrawer)
 const rail = ref(props.initialRail)
+const selectedTransition = ref('router-tab-swap')
 
 // Computed
 const currentYear = computed(() => new Date().getFullYear())
@@ -236,6 +263,7 @@ const handleLogout = () => {
 const handleFooterLink = (link: string) => {
   emit('footerLink', link)
 }
+
 </script>
 
 <style scoped>
@@ -255,5 +283,35 @@ const handleFooterLink = (link: string) => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* Add router-tab-swap transition if using custom slot */
+.router-tab-swap-enter-active,
+.router-tab-swap-leave-active {
+  position: relative;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+  will-change: opacity, transform;
+}
+
+.router-tab-swap-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.router-tab-swap-enter-to {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.router-tab-swap-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.router-tab-swap-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 </style>

@@ -49,3 +49,31 @@
     </v-row>
   </div>
 </template>
+
+<script setup>
+import { onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+onMounted(() => {
+  // Example: Update tab title dynamically
+  // Method 1: Update route meta
+  route.meta.title = 'John Doe Profile'
+  
+  // Method 2: Add custom title for title resolver
+  route.meta.customTitle = 'Profile - John Doe'
+  
+  // Method 3: Time-based title
+  const hour = new Date().getHours()
+  if (hour < 12) {
+    route.meta.title = 'Profile (Morning)'
+  } else if (hour < 18) {
+    route.meta.title = 'Profile (Afternoon)'
+  } else {
+    route.meta.title = 'Profile (Evening)'
+  }
+  
+  console.log('Profile tab title updated to:', route.meta.title)
+})
+</script>

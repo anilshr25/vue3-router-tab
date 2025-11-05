@@ -9,42 +9,43 @@ import { setRouterTabsTheme, setRouterTabsPrimary } from "vue3-router-tab";
 import { useTheme } from "vuetify";
 import { ColorStyle } from "../../lib/theme";
 
+
 const defaultColors: ColorStyle = {
-  primary: "#034960",
+  primary: "#f56505",
   background: "#ffffff",
-  text: "#1e293b",
+  text: "#2a2525",
   border: "#e2e8f0",
   
-  activeBackground: "#034960",
+  activeBackground: "#f56505",
   activeText: "#ffffff",
-  activeBorder: "#034960",
+  activeBorder: "#f56505",
   
-  headerBackground: "#ffff",
+  headerBackground: "#ffffff",
   
   buttonBackground: "#f8fafc",
-  buttonColor: "#034960",
-  activeButtonBackground: "#034960",
+  buttonColor: "#f56505",
+  activeButtonBackground: "#f56505",
   activeButtonColor: "#ffffff",
   
   iconColor: "#475569",
 }
 
 const defaultDarkColor: ColorStyle = {
-  primary: "#38bdf8",
-  background: "#0f172a",
+  primary: "#f56505",
+  background: "#2a2525",
   text: "#f1f5f9",
   border: "#334155",
   
-  activeBackground: "#1e293b",
-  activeText: "#38bdf8",
-  activeBorder: "#38bdf8",
+  activeBackground: "#2a2525",
+  activeText: "#f56505",
+  activeBorder: "#f56505",
   
-  headerBackground: "#fffff", // Darker shade of primary
+  headerBackground: "#1e293b", // Darker shade of primary
   
-  buttonBackground: "#1e293b",
+  buttonBackground: "#2a2525",
   buttonColor: "#f1f5f9",
-  activeButtonBackground: "#38bdf8",
-  activeButtonColor: "#0f172a",
+  activeButtonBackground: "#f56505",
+  activeButtonColor: "#2a2525",
   
   iconColor: "#cbd5e1",
 }

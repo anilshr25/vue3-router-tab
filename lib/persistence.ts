@@ -119,7 +119,7 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
         } finally {
           hydrating.value = false
         }
-      } else {
+      } else if (Object.prototype.hasOwnProperty.call(options, 'fallbackRoute')) {
         try {
           hydrating.value = true
           const fallback = options.fallbackRoute ?? ctrl.options.defaultRoute
@@ -127,6 +127,8 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
         } finally {
           hydrating.value = false
         }
+      } else {
+        hydrating.value = false
       }
 
       const snapshot = ctrl.snapshot()
@@ -147,7 +149,8 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
           tips: tab.tips,
           icon: tab.icon,
           tabClass: tab.tabClass,
-          closable: tab.closable
+          closable: tab.closable,
+          renderKey: tab.renderKey
         })),
         active: ctrl.activeId.value
       }),

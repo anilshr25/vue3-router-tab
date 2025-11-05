@@ -23,6 +23,7 @@ export interface TabMeta {
 export interface TabInput extends Partial<TabMeta> {
   to: RouteLocationRaw
   id?: string
+  renderKey?: number
 }
 
 export interface TabRecord extends TabMeta {
@@ -32,6 +33,7 @@ export interface TabRecord extends TabMeta {
   matched: RouteLocationNormalizedLoaded
   alive: boolean
   reusable: boolean
+  renderKey: number
 }
 
 export type RouterTabsMenuPreset =
@@ -64,6 +66,7 @@ export interface RouterTabsSnapshotTab {
   icon?: TabRecord['icon']
   tabClass?: TabRecord['tabClass']
   closable?: boolean
+  renderKey?: number
 }
 
 export interface RouterTabsSnapshot {

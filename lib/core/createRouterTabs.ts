@@ -96,6 +96,7 @@ function createTabFromRoute(
     alive: resolveAlive(route, keepAliveDefault),
     reusable: resolveReusable(route, false),
     closable: meta.closable ?? true,
+    renderKey: typeof base.renderKey === 'number' ? base.renderKey : 0,
     ...meta,
     ...base
   }
@@ -106,9 +107,9 @@ function insertTab(tabs: TabRecord[], tab: TabRecord, position: 'last' | 'next',
   if (exists) return
 
   if (position === 'next' && referenceId) {
-    const idx = tabs.findIndex(item => item.id === referenceId)
-    if (idx > -1) {
-      tabs.splice(idx + 1, 0, tab)
+    const referenceIndex = tabs.findIndex(item => item.id === referenceId)
+    if (referenceIndex !== -1) {
+      tabs.splice(referenceIndex + 1, 0, tab)
       return
     }
   }
@@ -134,7 +135,8 @@ function toSnapshotTab(tab: TabRecord): RouterTabsSnapshotTab {
     tips: tab.tips,
     icon: tab.icon,
     tabClass: tab.tabClass,
-    closable: tab.closable
+    closable: tab.closable,
+    renderKey: tab.renderKey
   }
 }
 
@@ -145,6 +147,9 @@ function fromSnapshotTab(snapshot: RouterTabsSnapshotTab): Partial<TabRecord> {
   if ('icon' in snapshot) base.icon = snapshot.icon
   if ('tabClass' in snapshot) base.tabClass = snapshot.tabClass
   if ('closable' in snapshot) base.closable = snapshot.closable
+  if ('renderKey' in snapshot && typeof snapshot.renderKey === 'number') {
+    base.renderKey = snapshot.renderKey
+  }
   return base
 }
 
@@ -158,7 +163,11 @@ export function createRouterTabs(
   const activeId = ref<string | null>(null)
   const current = shallowRef<TabRecord>()
   const refreshingKey = ref<string | null>(null)
-  const includeKeys = computed(() => tabs.filter(tab => tab.alive).map(tab => tab.id))
+  const includeKeys = computed(() =>
+    tabs
+      .filter(tab => tab.alive)
+      .map(tab => `${tab.id}::${tab.renderKey ?? 0}`)
+  )
 
   let isHydrating = false
 
@@ -187,6 +196,10 @@ export function createRouterTabs(
       tab.matched = route
       tab.alive = resolveAlive(route, options.keepAlive)
       tab.reusable = resolveReusable(route, tab.reusable)
+      // Ensure renderKey is initialized
+      if (typeof tab.renderKey !== 'number') {
+        tab.renderKey = 0
+      }
       Object.assign(tab, pickMeta(route))
       return tab
     }
@@ -211,7 +224,14 @@ export function createRouterTabs(
 
   function fallbackAfterClose(closedId: string): RouteLocationRaw | null {
     const idx = tabs.findIndex(item => item.id === closedId)
-    const candidate = tabs[idx] || tabs[idx - 1] || tabs[0]
+    if (idx === -1) return options.defaultRoute
+    
+    // Priority: next tab -> previous tab -> first available tab
+    const nextTab = tabs[idx + 1] // Next tab (after the one being closed)
+    const prevTab = tabs[idx - 1] // Previous tab
+    const firstTab = tabs.find(tab => tab.id !== closedId) // First available tab (excluding the one being closed)
+    
+    const candidate = nextTab || prevTab || firstTab
     if (candidate) return candidate.to
     return options.defaultRoute
   }
@@ -222,15 +242,20 @@ export function createRouterTabs(
       throw new Error('[RouterTabs] Unable to close the final tab when keepLastTab is true.')
     }
 
+    // Calculate fallback route BEFORE removing the tab
+    const isClosingActiveTab = activeId.value === id
+    const shouldRedirect = isClosingActiveTab && closeOptions.redirect !== null
+    const fallbackRoute = shouldRedirect ? (closeOptions.redirect ?? fallbackAfterClose(id)) : null
+
+
+
     await removeTab(id, { force: closeOptions.force })
 
+    // Only skip redirect if explicitly set to null
     if (closeOptions.redirect === null) return
 
-    if (activeId.value === id) {
-      const redirect = closeOptions.redirect ?? fallbackAfterClose(id)
-      if (redirect) await router.replace(redirect)
-    } else if (closeOptions.redirect) {
-      await router.replace(closeOptions.redirect)
+    if (shouldRedirect && fallbackRoute) {
+      await router.replace(fallbackRoute)
     }
   }
 
@@ -255,9 +280,35 @@ export function createRouterTabs(
 
   async function refreshTab(id: string | undefined = activeId.value ?? undefined, force = false) {
     if (!id) return
+    const tab = tabs.find(item => item.id === id)
+    if (!tab) return
+
+    const wasAlive = options.keepAlive && tab.alive
+
+    // Remove from KeepAlive cache if it was alive
+    if (wasAlive) {
+      tab.alive = false
+      await nextTick()
+    }
+
+    // Increment render key to force re-render
+    tab.renderKey = (tab.renderKey ?? 0) + 1
+
+    // Restore to KeepAlive cache
+    if (wasAlive) {
+      tab.alive = true
+    }
+
+    // Set refreshing state to trigger component unmount with transition
     refreshingKey.value = id
     await nextTick()
-    if (!force) await nextTick()
+    
+    // Wait for unmount transition and new component mount
+    if (!force) {
+      await nextTick()
+    }
+    
+    // Clear refreshing state to show the new component
     refreshingKey.value = null
   }
 

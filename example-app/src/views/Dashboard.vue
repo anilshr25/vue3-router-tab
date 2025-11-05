@@ -2,7 +2,13 @@
   <div>
     <v-row>
       <v-col cols="12">
-        <h1 class="text-h4 font-weight-bold mb-4">Dashboard</h1>
+        <div class="d-flex align-center justify-space-between mb-4">
+          <h1 class="text-h4 font-weight-bold">Dashboard</h1>
+          <v-chip color="success" variant="flat" class="pulse-animation">
+            <v-icon start>mdi-refresh</v-icon>
+            Loaded: {{ mountTime }}
+          </v-chip>
+        </div>
       </v-col>
 
       <!-- Stats Cards -->
@@ -111,3 +117,31 @@
   </div>
 </template>
 
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+
+const mountTime = ref('')
+
+onMounted(() => {
+  const now = new Date()
+  mountTime.value = now.toLocaleTimeString()
+  console.log('🔄 Dashboard page mounted at:', mountTime.value)
+})
+</script>
+
+<style scoped>
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.pulse-animation {
+  animation: pulse 0.5s ease-in-out;
+}
+</style>

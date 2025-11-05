@@ -11,6 +11,7 @@ import {
 } from './theme'
 
 import type { RouterTabsContext } from './core/types'
+import type { RouterTabsThemeOptions } from './theme'
 
 export type {
   TabRecord,
@@ -21,6 +22,28 @@ export type {
 } from './core/types'
 
 export type { RouterTabsThemeOptions } from './theme'
+
+export interface RouterTabsPluginOptions {
+  /**
+   * Whether to initialise the theme system automatically during install.
+   * Defaults to `true`.
+   */
+  initTheme?: boolean
+  /**
+   * Theme options passed to `initRouterTabsTheme` when `initTheme` is enabled.
+   */
+  themeOptions?: RouterTabsThemeOptions
+  /**
+   * Global component name used when registering `RouterTab`.
+   * Defaults to the component's `name` option or `"RouterTab"`.
+   */
+  componentName?: string
+  /**
+   * Global component name used when registering `RouterTabs`.
+   * Defaults to the component's `name` option or `"RouterTabs"`.
+   */
+  tabsComponentName?: string
+}
 
 export {
   routerTabsKey,
@@ -33,22 +56,42 @@ export {
   setRouterTabsPrimary
 }
 
-import "./scss/index.scss";
+export {
+  useReactiveTab,
+  useLoadingTab,
+  useNotificationTab,
+  useStatusTab
+} from './useReactiveTab'
+
+export type {
+  ReactiveTabState,
+  ReactiveTabReturn
+} from './useReactiveTab'
+
+import './scss/index.scss'
+
+let installed = false
 
 const plugin: Plugin = {
-  install(app: App) {
-    if ((plugin as any)._installed) return
-      ; (plugin as any)._installed = true
+  install(app: App, options?: RouterTabsPluginOptions) {
+    if (installed) return
+    installed = true
 
-    initRouterTabsTheme()
+    const {
+      initTheme = true,
+      themeOptions,
+      componentName = RouterTab.name || 'RouterTab',
+      tabsComponentName = RouterTabsComponent.name || 'RouterTabs'
+    } = options ?? {}
 
-    const componentName = RouterTab.name || 'RouterTab'
-    const persistenceComponentName = RouterTabsComponent.name || 'RouterTabs'
+    if (initTheme) {
+      initRouterTabsTheme(themeOptions ?? {})
+    }
 
     app.component(componentName, RouterTab)
-    app.component(persistenceComponentName, RouterTabsComponent)
+    app.component(tabsComponentName, RouterTabsComponent)
 
-    if (persistenceComponentName !== 'router-tabs') {
+    if (tabsComponentName.toLowerCase() !== 'router-tabs') {
       app.component('router-tabs', RouterTabsComponent)
     }
 

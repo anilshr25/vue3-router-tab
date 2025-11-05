@@ -74,6 +74,51 @@ const routes = [
         },
       },
       {
+        path: '/test-untitled',
+        name: 'test-untitled',
+        component: () => import('./views/TestUntitled.vue'),
+        meta: {
+          title: 'Then Demos',
+          icon: 'mdi-test-tube',
+        },
+      },
+      {
+        path: '/advanced-demo',
+        name: 'AdvancedDemo',
+        component: () => import('./views/AdvancedTabDemo.vue'),
+        meta: {
+          title: 'Advanced Demo',
+          icon: 'mdi-rocket',
+        },
+      },
+      {
+        path: '/composable-demo',
+        name: 'ComposableDemo',
+        component: () => import('./views/ComposableDemo.vue'),
+        meta: {
+          title: 'Composable Demo',
+          icon: 'mdi-puzzle',
+        },
+      },
+      {
+        path: '/transition-demo',
+        name: 'TransitionDemo',
+        component: () => import('./views/TransitionDemo.vue'),
+        meta: {
+          title: 'Transition Effects',
+          icon: 'mdi-animation-play',
+        },
+      },
+      {
+        path: '/title-test',
+        name: 'TitleTest',
+        component: () => import('./views/TitleTestDemo.vue'),
+        meta: {
+          title: 'Title Test',
+          icon: 'mdi-format-title',
+        },
+      },
+      {
         path: '/:pathMatch(.*)*',
         name: 'NotFound',
         component: () => import('./views/NotFound.vue'),

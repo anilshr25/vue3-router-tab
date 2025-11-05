@@ -46,7 +46,7 @@ const defaultColors: ColorStyle = {
   activeText: "#ffffff",
   activeBorder: "#034960",
   
-  headerBackground: "#ffff",
+  headerBackground: "#ffffff",
   
   buttonBackground: "#f8fafc",
   buttonColor: "#034960",
@@ -76,6 +76,22 @@ const defaultDarkColor: ColorStyle = {
   iconColor: "#cbd5e1",
 }
 
+function readStoredPrimary(key: string): Partial<ColorStyle> | null {
+  if (typeof window === 'undefined') return null
+  const raw = window.localStorage.getItem(key)
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<ColorStyle>
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch (error) {
+    if (import.meta.env?.DEV) {
+      console.warn('[RouterTabs] Failed to parse stored primary color palette', error)
+    }
+    return null
+  }
+}
+
 function applyPrimary(color: ColorStyle) {
   if (typeof document === 'undefined') return
   document.documentElement.style.setProperty('--router-tab-primary', color.primary ?? defaultColors.primary)
@@ -90,6 +106,7 @@ function applyPrimary(color: ColorStyle) {
   document.documentElement.style.setProperty('--router-tab-active-button-color', color.activeButtonColor ?? defaultColors.activeButtonColor)
   document.documentElement.style.setProperty('--router-tab-button-background', color.buttonBackground ?? defaultColors.buttonBackground)
   document.documentElement.style.setProperty('--router-tab-active-button-background', color.activeButtonBackground ?? defaultColors.activeButtonBackground)
+  document.documentElement.style.setProperty('--router-tab-icon-color', color.iconColor ?? defaultColors.iconColor)
 }
 
 function applyStyle(style: 'light' | 'dark' | 'system') {
@@ -121,17 +138,36 @@ export function initRouterTabsTheme(options: RouterTabsThemeOptions = {}) {
 
   const {
     styleKey = STYLE_KEY,
+    primaryKey = PRIMARY_KEY,
     defaultStyle = DEFAULT_STYLE,
+    defaultPrimary
   } = options
 
   const storedStyle = (window.localStorage.getItem(styleKey) as 'light' | 'dark' | 'system' | null) ?? defaultStyle
 
   applyStyle(storedStyle)
-  
-  if (storedStyle === 'dark') {
-    applyPrimary(defaultDarkColor)
+
+  const prefersDark =
+    storedStyle === 'dark' ||
+    (storedStyle === 'system' && window.matchMedia(MEDIA_QUERY).matches)
+
+  const basePalette = prefersDark
+    ? { ...defaultDarkColor }
+    : { ...defaultColors }
+
+  if (defaultPrimary) {
+    basePalette.primary = defaultPrimary
+  }
+
+  const storedPrimary = readStoredPrimary(primaryKey)
+
+  if (storedPrimary) {
+    applyPrimary({
+      ...basePalette,
+      ...storedPrimary
+    })
   } else {
-    applyPrimary(defaultColors)
+    applyPrimary(basePalette)
   }
 }
 

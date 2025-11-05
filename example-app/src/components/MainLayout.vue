@@ -1,4 +1,3 @@
-
 <template>
   <AppLayout
     :menu-items="menuItems"
@@ -18,7 +17,9 @@
     <!-- Custom Header Actions -->
     <template #header-actions>
       <v-btn icon @click="toggleTheme" variant="text">
-        <v-icon>{{ theme.global.current.value.dark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
+        <v-icon>{{
+          theme.global.current.value.dark ? "mdi-weather-sunny" : "mdi-weather-night"
+        }}</v-icon>
       </v-btn>
       <v-btn icon="mdi-magnify" variant="text" />
       <v-btn icon variant="text">
@@ -66,37 +67,43 @@
 </template>
 
 <script setup lang="ts">
-import { useTheme } from 'vuetify'
-import type { MenuItem } from '../types/menu'
-import AppLayout from './AppLayout.vue'
+import { useTheme } from "vuetify";
+import type { MenuItem } from "../types/menu";
+import AppLayout from "./AppLayout.vue";
 
-const theme = useTheme()
+const theme = useTheme();
 
 const menuItems: MenuItem[] = [
-  { title: 'Dashboard', icon: 'mdi-view-dashboard', to: '/dashboard' },
-  { title: 'Users', icon: 'mdi-account-multiple', to: '/users', badge: '12' },
-  { title: 'Products', icon: 'mdi-package-variant', to: '/products' },
-  { title: 'Orders', icon: 'mdi-cart', to: '/orders', badge: '5' },
-  { title: 'Analytics', icon: 'mdi-chart-line', to: '/analytics' },
-  { title: 'Settings', icon: 'mdi-cog', to: '/settings' },
-]
+  { title: "Dashboard", icon: "mdi-view-dashboard", to: "/dashboard" },
+  { title: "Users", icon: "mdi-account-multiple", to: "/users", badge: "12" },
+  { title: "Products", icon: "mdi-package-variant", to: "/products" },
+  { title: "Orders", icon: "mdi-cart", to: "/orders", badge: "5" },
+  { title: "Analytics", icon: "mdi-chart-line", to: "/analytics" },
+  { title: "Settings", icon: "mdi-cog", to: "/settings" },
+  { title: "Title Test", icon: "mdi-format-title", to: "/title-test" },
+  { title: "Transition Demo", icon: "mdi-animation-play", to: "/transition-demo" },
+  { title: "Ds Demo", icon: "mdi-test-tube", to: "/test-untitled" },
+  { title: "Advanced Demo", icon: "mdi-rocket", to: "/advanced-demo" },
+  { title: "Composable Demo", icon: "mdi-puzzle", to: "/composable-demo" },
+  { title: "Simple Test", icon: "mdi-flask", to: "/simple-test" },
+  { title: "Debug Test", icon: "mdi-bug-outline", to: "/debug-test" },
+];
 
 const toggleTheme = () => {
-  const themeStyle = window.localStorage.getItem('tab-theme-style')
+  const themeStyle = window.localStorage.getItem("tab-theme-style");
 
-  theme.change(themeStyle == 'dark' ? 'light' : 'dark')
-  console.log('Toggle theme clicked', theme.global.current.value )
+  theme.change(themeStyle == "dark" ? "light" : "dark");
 
-  window.localStorage.setItem('tab-theme-style', themeStyle == 'dark' ? 'light' : 'dark')
-}
+  window.localStorage.setItem("tab-theme-style", themeStyle == "dark" ? "light" : "dark");
+};
 
 const handleLogout = () => {
-  console.log('Logout clicked')
-}
+  console.log("Logout clicked");
+};
 
 const handleFooterLink = (link: string) => {
-  console.log('Footer link clicked:', link)
-}
+  console.log("Footer link clicked:", link);
+};
 </script>
 
 <style>
