@@ -81,6 +81,7 @@
               :max="controller.options.maxAlive || undefined"
             >
               <component
+                v-if="isTabReady(routerSlot.route)"
                 :is="routerSlot.Component"
                 :key="getComponentCacheKey(routerSlot.route)"
                 :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(routerSlot.route))"
@@ -88,7 +89,7 @@
               />
             </KeepAlive>
             <component
-              v-else
+              v-else-if="isTabReady(routerSlot.route)"
               :is="routerSlot.Component"
               :key="getComponentCacheKey(routerSlot.route)"
               :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(routerSlot.route))"
@@ -609,7 +610,7 @@ export default defineComponent({
       }
     }
 
-    function setMenuItemRef(el: Element | null, index: number) {
+    function setMenuItemRef(el: any | null, index: number) {
       menuItemRefs.value[index] = (el as HTMLElement) ?? null
     }
 
@@ -729,7 +730,15 @@ export default defineComponent({
     function getComponentCacheKey(route: RouteLocationNormalizedLoaded): string {
       const routeKey = controller.getRouteKey(route)
       const tab = controller.tabs.find(item => item.id === routeKey)
-      const renderKey = tab?.renderKey ?? 0
+      
+      // If tab doesn't exist yet, ensure it's created
+      if (!tab) {
+        // This shouldn't happen, but handle it gracefully
+        console.warn('[RouterTab] Tab not found for route:', routeKey)
+        return `${routeKey}::0`
+      }
+      
+      const renderKey = tab.renderKey ?? 0
       return `${routeKey}::${renderKey}`
     }
 
@@ -776,6 +785,11 @@ export default defineComponent({
 
     function isRefreshing(route: RouteLocationNormalizedLoaded) {
       return controller.refreshingKey.value === controller.getRouteKey(route)
+    }
+
+    function isTabReady(route: RouteLocationNormalizedLoaded) {
+      const routeKey = controller.getRouteKey(route)
+      return controller.tabs.some(tab => tab.id === routeKey)
     }
 
     // Drag and drop handlers
@@ -919,6 +933,7 @@ export default defineComponent({
       getTabTitle,
       isClosable,
       isRefreshing,
+      isTabReady,
       hasCustomSlot,
       hasStartSlot,
       hasEndSlot,
