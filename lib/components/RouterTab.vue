@@ -134,6 +134,7 @@ import {
   getCurrentInstance,
   nextTick,
   onBeforeUnmount,
+  onErrorCaptured,
   onMounted,
   provide,
   reactive,
@@ -275,118 +276,185 @@ export default defineComponent({
     function setupComponentWatching(routeKey: string, componentInstance: any) {
       if (!componentInstance || componentInstances.has(routeKey)) return
       
-      // setup watchers for exposed reactive tab props
-      
-      componentInstances.set(routeKey, componentInstance)
-      
-      // Find the tab for this route
-      const tab = controller.tabs.find(t => controller.getRouteKey(t.to) === routeKey)
-      if (!tab) return
-      
-      const unwatchers: (() => void)[] = []
-      
-      // Watch routeTabTitle for title updates
-      if (componentInstance.routeTabTitle !== undefined) {
-        const unwatchTitle = watch(
-          () => {
-            // Handle both ref values and regular values
-            const titleValue = componentInstance.routeTabTitle
-            return titleValue && typeof titleValue === 'object' && 'value' in titleValue ? titleValue.value : titleValue
-          },
-          (newTitle) => {
-            if (newTitle !== undefined && newTitle !== null) {
-              const titleString = String(newTitle)
-              tab.title = titleString
-              triggerTabUpdate() // Trigger reactivity
-            }
-          },
-          { immediate: true }
-        )
-        unwatchers.push(unwatchTitle)
+      try {
+        // setup watchers for exposed reactive tab props
+        
+        componentInstances.set(routeKey, componentInstance)
+        
+        // Find the tab for this route
+        const tab = controller.tabs.find(t => controller.getRouteKey(t.to) === routeKey)
+        if (!tab) {
+          console.warn(`[RouterTab] Cannot setup watching: tab not found for ${routeKey}`)
+          return
+        }
+        
+        const unwatchers: (() => void)[] = []
+        
+        // Watch routeTabTitle for title updates
+        if (componentInstance.routeTabTitle !== undefined) {
+          try {
+            const unwatchTitle = watch(
+              () => {
+                // Handle both ref values and regular values
+                const titleValue = componentInstance.routeTabTitle
+                return titleValue && typeof titleValue === 'object' && 'value' in titleValue ? titleValue.value : titleValue
+              },
+              (newTitle) => {
+                if (newTitle !== undefined && newTitle !== null) {
+                  const titleString = String(newTitle)
+                  tab.title = titleString
+                  triggerTabUpdate() // Trigger reactivity
+                }
+              },
+              { immediate: true }
+            )
+            unwatchers.push(unwatchTitle)
+          } catch (error) {
+            console.error(`[RouterTab] Error watching routeTabTitle for ${routeKey}:`, error)
+          }
+        }
+        
+        // Watch routeTabIcon for icon updates
+        if (componentInstance.routeTabIcon !== undefined) {
+          try {
+            const unwatchIcon = watch(
+              () => {
+                const iconValue = componentInstance.routeTabIcon
+                return iconValue && typeof iconValue === 'object' && 'value' in iconValue ? iconValue.value : iconValue
+              },
+              (newIcon) => {
+                if (newIcon !== undefined && newIcon !== null) {
+                  tab.icon = String(newIcon)
+                  triggerTabUpdate() // Trigger reactivity
+                }
+              },
+              { immediate: true }
+            )
+            unwatchers.push(unwatchIcon)
+          } catch (error) {
+            console.error(`[RouterTab] Error watching routeTabIcon for ${routeKey}:`, error)
+          }
+        }
+        
+        // Watch routeTabClosable for closable state updates
+        if (componentInstance.routeTabClosable !== undefined) {
+          try {
+            const unwatchClosable = watch(
+              () => {
+                const closableValue = componentInstance.routeTabClosable
+                return closableValue && typeof closableValue === 'object' && 'value' in closableValue ? closableValue.value : closableValue
+              },
+              (newClosable) => {
+                if (newClosable !== undefined && newClosable !== null) {
+                  tab.closable = Boolean(newClosable)
+                  triggerTabUpdate() // Trigger reactivity
+                }
+              },
+              { immediate: true }
+            )
+            unwatchers.push(unwatchClosable)
+          } catch (error) {
+            console.error(`[RouterTab] Error watching routeTabClosable for ${routeKey}:`, error)
+          }
+        }
+        
+        // Watch routeTabMeta for general meta updates
+        if (componentInstance.routeTabMeta !== undefined) {
+          try {
+            const unwatchMeta = watch(
+              () => {
+                const metaValue = componentInstance.routeTabMeta
+                return metaValue && typeof metaValue === 'object' && 'value' in metaValue ? metaValue.value : metaValue
+              },
+              (newMeta) => {
+                if (newMeta && typeof newMeta === 'object') {
+                  Object.assign(tab, newMeta)
+                  triggerTabUpdate() // Trigger reactivity
+                }
+              },
+              { immediate: true, deep: true }
+            )
+            unwatchers.push(unwatchMeta)
+          } catch (error) {
+            console.error(`[RouterTab] Error watching routeTabMeta for ${routeKey}:`, error)
+          }
+        }
+        
+        watchedProperties.set(routeKey, unwatchers)
+      } catch (error) {
+        console.error(`[RouterTab] Error in setupComponentWatching for ${routeKey}:`, error)
+        // Clean up on error
+        cleanupComponentWatching(routeKey)
       }
-      
-      // Watch routeTabIcon for icon updates
-      if (componentInstance.routeTabIcon !== undefined) {
-        const unwatchIcon = watch(
-          () => {
-            const iconValue = componentInstance.routeTabIcon
-            return iconValue && typeof iconValue === 'object' && 'value' in iconValue ? iconValue.value : iconValue
-          },
-          (newIcon) => {
-            if (newIcon !== undefined && newIcon !== null) {
-              tab.icon = String(newIcon)
-              triggerTabUpdate() // Trigger reactivity
-            }
-          },
-          { immediate: true }
-        )
-        unwatchers.push(unwatchIcon)
-      }
-      
-      // Watch routeTabClosable for closable state updates
-      if (componentInstance.routeTabClosable !== undefined) {
-        const unwatchClosable = watch(
-          () => {
-            const closableValue = componentInstance.routeTabClosable
-            return closableValue && typeof closableValue === 'object' && 'value' in closableValue ? closableValue.value : closableValue
-          },
-          (newClosable) => {
-            if (newClosable !== undefined && newClosable !== null) {
-              tab.closable = Boolean(newClosable)
-              triggerTabUpdate() // Trigger reactivity
-            }
-          },
-          { immediate: true }
-        )
-        unwatchers.push(unwatchClosable)
-      }
-      
-      // Watch routeTabMeta for general meta updates
-      if (componentInstance.routeTabMeta !== undefined) {
-        const unwatchMeta = watch(
-          () => {
-            const metaValue = componentInstance.routeTabMeta
-            return metaValue && typeof metaValue === 'object' && 'value' in metaValue ? metaValue.value : metaValue
-          },
-          (newMeta) => {
-            if (newMeta && typeof newMeta === 'object') {
-              Object.assign(tab, newMeta)
-              triggerTabUpdate() // Trigger reactivity
-            }
-          },
-          { immediate: true, deep: true }
-        )
-        unwatchers.push(unwatchMeta)
-      }
-      
-      watchedProperties.set(routeKey, unwatchers)
     }
     
     // Cleanup watchers when component is unmounted
     function cleanupComponentWatching(routeKey: string) {
-      const unwatchers = watchedProperties.get(routeKey)
-      if (unwatchers) {
-        unwatchers.forEach(unwatcher => unwatcher())
-        watchedProperties.delete(routeKey)
+      try {
+        const unwatchers = watchedProperties.get(routeKey)
+        if (unwatchers) {
+          unwatchers.forEach(unwatcher => {
+            try {
+              unwatcher()
+            } catch (error) {
+              console.error(`[RouterTab] Error cleaning up watcher for ${routeKey}:`, error)
+            }
+          })
+          watchedProperties.delete(routeKey)
+        }
+        componentInstances.delete(routeKey)
+      } catch (error) {
+        console.error(`[RouterTab] Error in cleanupComponentWatching for ${routeKey}:`, error)
       }
-      componentInstances.delete(routeKey)
     }
     
     // Handle component ref changes
     function handleComponentRef(el: any, routeKey: string) {
-      if (el) {
-        // Component mounted - set up watching
-        // Check if properties are exposed directly on el (Vue 3 with defineExpose)
-        if (el.routeTabTitle !== undefined || el.routeTabIcon !== undefined || el.routeTabClosable !== undefined) {
-          setupComponentWatching(routeKey, el)
-        } else if (el.$ && (el.$.routeTabTitle !== undefined || el.$.routeTabIcon !== undefined || el.$.routeTabClosable !== undefined)) {
-          setupComponentWatching(routeKey, el.$)
+      try {
+        if (el) {
+          // Component mounted - set up watching
+          // Check if properties are exposed directly on el (Vue 3 with defineExpose)
+          if (el.routeTabTitle !== undefined || el.routeTabIcon !== undefined || el.routeTabClosable !== undefined) {
+            setupComponentWatching(routeKey, el)
+          } else if (el.$ && (el.$.routeTabTitle !== undefined || el.$.routeTabIcon !== undefined || el.$.routeTabClosable !== undefined)) {
+            setupComponentWatching(routeKey, el.$)
+          }
+        } else if (el === null) {
+          // Component unmounted - cleanup
+          cleanupComponentWatching(routeKey)
         }
-      } else if (el === null) {
-        // Component unmounted - cleanup
+      } catch (error) {
+        console.error(`[RouterTab] Error handling component ref for ${routeKey}:`, error)
+        // Clean up on error to prevent stale state
         cleanupComponentWatching(routeKey)
       }
     }
+
+    // Error handling: Capture errors from child components
+    onErrorCaptured((err, instance, info) => {
+      console.error('[RouterTab] Error captured from component:', err, info)
+      
+      // Try to find the route key for the erroring component
+      if (instance && controller.activeId.value) {
+        const routeKey = controller.activeId.value
+        
+        // Clean up the component instance to prevent stale state
+        cleanupComponentWatching(routeKey)
+        
+        // Remove from KeepAlive cache if it's cached
+        const tab = controller.tabs.find(t => t.id === routeKey)
+        if (tab && tab.alive) {
+          console.warn(`[RouterTab] Removing errored component ${routeKey} from KeepAlive cache`)
+          tab.alive = false
+          nextTick(() => {
+            tab.alive = true
+          })
+        }
+      }
+      
+      // Return false to propagate the error to parent
+      return false
+    })
 
     if (props.cookieKey !== null || props.persistence) {
       const options: RouterTabsPersistenceOptions = {
@@ -862,7 +930,13 @@ export default defineComponent({
       
       // Cleanup all component watchers
       watchedProperties.forEach((unwatchers) => {
-        unwatchers.forEach(unwatcher => unwatcher())
+        unwatchers.forEach(unwatcher => {
+          try {
+            unwatcher()
+          } catch (error) {
+            console.error('[RouterTab] Error during cleanup:', error)
+          }
+        })
       })
       watchedProperties.clear()
       componentInstances.clear()
@@ -878,6 +952,23 @@ export default defineComponent({
     watch(
       () => controller.activeId.value,
       () => hideContextMenu()
+    )
+
+    // Clean up stale component instances when tabs are closed
+    watch(
+      () => controller.tabs.length,
+      () => {
+        // Check for stale component instances
+        const currentTabIds = new Set(controller.tabs.map(tab => tab.id))
+        const instanceKeys = Array.from(componentInstances.keys())
+        
+        instanceKeys.forEach(key => {
+          if (!currentTabIds.has(key)) {
+            console.log(`[RouterTab] Cleaning up stale component instance: ${key}`)
+            cleanupComponentWatching(key)
+          }
+        })
+      }
     )
 
     watch(
