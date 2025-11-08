@@ -87,6 +87,7 @@ const menuItems: MenuItem[] = [
   { title: "Composable Demo", icon: "mdi-puzzle", to: "/composable-demo" },
   { title: "Simple Test", icon: "mdi-flask", to: "/simple-test" },
   { title: "Debug Test", icon: "mdi-bug-outline", to: "/debug-test" },
+  { title: "Cache Control", icon: "mdi-database-refresh", to: "/cache-control-demo" }
 ];
 
 const toggleTheme = () => {

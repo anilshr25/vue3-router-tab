@@ -115,6 +115,11 @@ export interface RouterTabsContext {
   matchRoute: (route: RouteLocationNormalizedLoaded | RouteLocationRaw) => RouteMatchResult
   snapshot: () => RouterTabsSnapshot
   hydrate: (snapshot: RouterTabsSnapshot) => Promise<void>
+  setTabAlive: (id: string, alive: boolean) => void
+  evictCache: (id: string) => void
+  clearCache: () => void
+  getCacheKeys: () => string[]
+  ensureTab: (route: RouteLocationNormalizedLoaded) => TabRecord | undefined
 }
 
 export interface RouterTabsPersistenceOptions {

@@ -119,6 +119,24 @@ const routes = [
         },
       },
       {
+        path: '/cache-control-demo',
+        name: 'CacheControlDemo',
+        component: () => import('./views/CacheControlDemo.vue'),
+        meta: {
+          title: 'Cache Control',
+          icon: 'mdi-database-refresh',
+        },
+      },
+      {
+        path: '/blank-page-diagnostics',
+        name: 'BlankPageDiagnostics',
+        component: () => import('./views/BlankPageDiagnostics.vue'),
+        meta: {
+          title: 'Blank Page Diagnostics',
+          icon: 'mdi-bug-check',
+        },
+      },
+      {
         path: '/:pathMatch(.*)*',
         name: 'NotFound',
         component: () => import('./views/NotFound.vue'),

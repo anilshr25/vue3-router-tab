@@ -318,6 +318,35 @@ export function createRouterTabs(
     }
   }
 
+  // Programmatic control: set whether a tab is kept alive
+  function setTabAlive(id: string, alive: boolean) {
+    const tab = tabs.find(t => t.id === id)
+    if (!tab) return
+    tab.alive = Boolean(alive)
+    // enforce max alive if turning alive on
+    if (tab.alive) enforceMaxAlive(tabs, options.maxAlive, activeId.value)
+  }
+
+  // Evict a tab from the KeepAlive cache and increment renderKey so it mounts fresh
+  function evictCache(id: string) {
+    const tab = tabs.find(t => t.id === id)
+    if (!tab) return
+    if (tab.alive) tab.alive = false
+    // bump renderKey to ensure a fresh key when re-enabled
+    tab.renderKey = (tab.renderKey ?? 0) + 1
+  }
+
+  // Clear keep-alive for all tabs
+  function clearCache() {
+    tabs.forEach(tab => {
+      tab.alive = false
+    })
+  }
+
+  function getCacheKeys() {
+    return includeKeys.value.slice()
+  }
+
   async function reset(route: RouteLocationRaw = options.defaultRoute) {
     tabs.splice(0, tabs.length)
     activeId.value = null
@@ -368,9 +397,7 @@ export function createRouterTabs(
         const tab = createTabFromRoute(route, base, options.keepAlive)
         insertTab(tabs, tab, 'last', null)
       } catch (error) {
-        if (import.meta.env?.DEV) {
-          console.warn('[RouterTabs] Failed to restore tab', record, error)
-        }
+        console.warn('[RouterTabs] Failed to restore tab', record, error)
       }
     }
 
@@ -381,9 +408,7 @@ export function createRouterTabs(
       try {
         await router.replace(target)
       } catch (error) {
-        if (import.meta.env?.DEV) {
-          console.warn('[RouterTabs] Failed to navigate to restored route', target, error)
-        }
+        console.warn('[RouterTabs] Failed to navigate to restored route', target, error)
       }
     }
   }
@@ -420,11 +445,16 @@ export function createRouterTabs(
     removeTab,
     refreshTab,
     refreshAll,
+    setTabAlive,
+    evictCache,
+    clearCache,
+    getCacheKeys,
     reset,
     reload,
     getRouteKey,
     matchRoute,
     snapshot,
-    hydrate
+    hydrate,
+    ensureTab
   }
 }

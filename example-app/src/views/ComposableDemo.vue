@@ -103,6 +103,16 @@
                 </v-card>
               </v-col>
             </v-row>
+            <v-row>
+              <v-col cols="12" md="6">
+                <v-text-field label="Test Keep-Alive" placeholder="Type something here..." />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-btn @click="evictCache" color="warning" block>
+                  Evict Cache (Force Reload)
+                </v-btn>
+              </v-col>
+            </v-row>
           </v-card-text>
         </v-card>
       </v-col>
@@ -182,7 +192,9 @@ const { routeTabTitle, routeTabIcon, routeTabClosable } = useStatusTab(
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useLoadingTab, useNotificationTab, useStatusTab } from '../../../lib'
+import { useLoadingTab, useNotificationTab, useStatusTab, useRouterTabs } from '../../../lib'
+
+const tabs = useRouterTabs()
 
 // State
 const isLoading = ref(false)
@@ -238,6 +250,14 @@ function cycleStatus() {
   const statuses: Array<'normal' | 'loading' | 'error' | 'success'> = ['normal', 'loading', 'error', 'success']
   const currentIndex = statuses.indexOf(currentStatus.value)
   currentStatus.value = statuses[(currentIndex + 1) % statuses.length]
+}
+
+function evictCache() {
+  if (tabs.current.value) {
+    tabs.evictCache(tabs.current.value.id)
+    // Optional: show a notification to the user
+    alert('Cache evicted for this tab. It will reload fresh on next visit.')
+  }
 }
 
 // Expose reactive properties for RouterTab to access

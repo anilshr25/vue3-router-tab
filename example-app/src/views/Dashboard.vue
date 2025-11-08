@@ -118,11 +118,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
+import { useFirstMount } from '../composables/useFirstMount'
 
 const mountTime = ref('')
+const { onFirstMount } = useFirstMount()
 
-onMounted(() => {
+onFirstMount(() => {
   const now = new Date()
   mountTime.value = now.toLocaleTimeString()
   console.log('🔄 Dashboard page mounted at:', mountTime.value)

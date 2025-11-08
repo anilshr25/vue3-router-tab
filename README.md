@@ -1,36 +1,46 @@
-# vue3-router-tab
+# Vue3 Router Tab
 
-A Vue 3 tab-bar plugin that keeps multiple routes alive with transition support, context menus, and optional cookie-based persistence.
+[![npm version](https://badge.fury.io/js/vue3-router-tab.svg)](https://badge.fury.io/js/vue3-router-tab)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 
-## ✨ Features
+A powerful, feature-rich Vue 3 tab-bar plugin that keeps multiple routes alive with smooth transitions, context menus, drag-and-drop reordering, and optional cookie-based persistence. Built for modern Vue 3 applications with full TypeScript support.
 
-- 🎯 **Multi-tab Navigation** - Keep multiple routes alive simultaneously
+## ✨ Key Features
+
+- 🎯 **Multi-tab Navigation** - Keep multiple routes alive simultaneously with intelligent caching
 - 🔄 **7 Built-in Transitions** - Smooth page transitions (swap, slide, fade, scale, flip, rotate, bounce)
 - 🎨 **Reactive Tab Titles** - Automatically update tab titles, icons, and closability from component state
 - 🖱️ **Context Menu** - Right-click tabs for refresh, close, and navigation options
-- 🔀 **Drag & Drop** - Reorder tabs with drag-and-drop
-- 💾 **Cookie Persistence** - Restore tabs on page refresh
+- 🔀 **Drag & Drop** - Reorder tabs with drag-and-drop (sortable)
+- 💾 **Cookie Persistence** - Restore tabs on page refresh with customizable options
 - 🎭 **Theme Support** - Light, dark, and system themes with customizable colors
-- ⚡ **KeepAlive Support** - Preserve component state when switching tabs
-- 🎛️ **Highly Configurable** - Extensive props and events for customization
-- 📱 **TypeScript Support** - Full TypeScript definitions included
+- ⚡ **KeepAlive Support** - Preserve component state when switching tabs with smart cache management
+- ♿ **Accessibility** - Full WCAG compliance with ARIA labels, keyboard navigation, and screen reader support
+- 🚀 **Performance Optimized** - Intelligent caching, memoization, and memory management
+- 🎛️ **Highly Configurable** - Extensive props, events, and customization options
+- 📱 **TypeScript Support** - Full TypeScript definitions with excellent developer experience
+- 🔧 **Error Recovery** - Automatic error handling with graceful degradation and recovery mechanisms
 
-## Installation
+## 📦 Installation
 
 ```bash
 npm install vue3-router-tab
 # or
 pnpm add vue3-router-tab
+# or
+yarn add vue3-router-tab
 ```
 
-## Register the plugin
+## 🚀 Quick Start
+
+### 1. Register the Plugin
 
 ```ts
 // main.ts
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-
 import RouterTab from 'vue3-router-tab'
 
 const app = createApp(App)
@@ -39,79 +49,551 @@ app.use(RouterTab)
 app.mount('#app')
 ```
 
-The plugin registers the `<router-tab>` component globally. It also exposes an optional `<router-tabs>` helper for advanced cookie options, but you rarely need it now that persistence can be enabled directly on the tab component.
-
-## Basic Usage
+### 2. Basic Usage
 
 ```vue
 <template>
-  <router-tab cookie-key="app-tabs" />
+  <router-tab />
 </template>
 ```
 
-> Hint: `cookie-key` is optional. Omit it to fall back to the default `router-tabs:snapshot` cookie, or set your own as shown above.
+That's it! You now have a fully functional tabbed router interface.
 
-### Enhanced Usage
+### 3. Enhanced Usage with Persistence
 
 ```vue
 <template>
-  <router-tab 
-    cookie-key="app-tabs"
+  <router-tab
+    cookie-key="my-app-tabs"
     :sortable="true"
-    @tab-sort="onTabSort"
-    @tab-sorted="onTabSorted"
+    :keep-alive="true"
   />
 </template>
-
-<script setup>
-function onTabSort({ tab, index }) {
-  console.log('Tab drag started:', tab.title, 'at index', index)
-}
-
-function onTabSorted({ tab, fromIndex, toIndex }) {
-  console.log('Tab moved:', tab.title, 'from', fromIndex, 'to', toIndex)
-}
-</script>
 ```
 
-Need to customise the rendered output? Provide a slot and use the routed component directly—see [`example-app/src/App.vue`](example-app/src/App.vue) for a working sample:
+## 📖 Usage Guide
+
+### Basic Configuration
 
 ```vue
-<router-tab cookie-key="app-tabs">
-  <template #default="{ Component, route }">
-    <Suspense>
-      <component :is="Component" :key="route.fullPath" />
-    </Suspense>
-  </template>
-</router-tab>
+<template>
+  <router-tab
+    cookie-key="app-tabs"
+    :keep-alive="true"
+    :max-alive="10"
+    :keep-last-tab="true"
+    :sortable="true"
+    page-transition="router-tab-fade"
+    tab-transition="router-tab-zoom"
+  />
+</template>
 ```
 
-Configure route metadata to control tab labels, icons, and lifecycle behaviour:
+### Route Configuration
+
+Configure your routes with tab metadata:
 
 ```ts
+// router/index.ts
 const routes = [
   {
     path: '/',
     component: Home,
     meta: {
       title: 'Home',
-      icon: 'fa fa-home',
-      key: 'fullPath',
+      icon: 'mdi-home',
       closable: true,
       keepAlive: true,
     },
   },
   {
-    path: '/about',
-    component: About,
+    path: '/users',
+    component: Users,
     meta: {
-      title: 'About',
-      icon: 'fa fa-info-circle',
+      title: 'Users',
+      icon: 'mdi-account-group',
+      closable: true,
+      keepAlive: true,
+    },
+  },
+  {
+    path: '/settings',
+    component: Settings,
+    meta: {
+      title: 'Settings',
+      icon: 'mdi-cog',
+      closable: false, // Can't be closed
       keepAlive: false,
     },
   },
 ]
 ```
+
+### Reactive Tab Properties
+
+Make your tabs dynamic by exposing reactive properties in your components:
+
+```vue
+<template>
+  <div>
+    <h1>{{ pageTitle }}</h1>
+    <button @click="updateTitle">Update Title</button>
+    <div v-if="loading">Loading...</div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+
+// These reactive properties automatically update the tab
+const pageTitle = ref('Dashboard')
+const loading = ref(false)
+const notificationCount = ref(0)
+
+// Tab title updates automatically
+const routeTabTitle = computed(() => {
+  if (loading.value) return 'Loading...'
+  if (notificationCount.value > 0) return `Dashboard (${notificationCount.value})`
+  return pageTitle.value
+})
+
+// Tab icon changes based on state
+const routeTabIcon = computed(() =>
+  loading.value ? 'mdi-loading mdi-spin' : 'mdi-view-dashboard'
+)
+
+// Prevent closing while loading
+const routeTabClosable = computed(() => !loading.value)
+
+function updateTitle() {
+  pageTitle.value = 'Updated Dashboard'
+}
+</script>
+```
+
+## 🎨 Transitions
+
+Choose from 7 built-in transition effects:
+
+```vue
+<!-- Default transition -->
+<router-tab />
+
+<!-- Custom transition -->
+<router-tab page-transition="router-tab-scale" />
+
+<!-- Advanced configuration -->
+<router-tab :page-transition="{ name: 'router-tab-flip', mode: 'out-in' }" />
+```
+
+### Available Transitions
+
+| Transition | Description | Best For |
+|------------|-------------|----------|
+| `router-tab-swap` | Smooth up/down slide with fade | General purpose (default) |
+| `router-tab-slide` | Horizontal sliding | Dashboard navigation |
+| `router-tab-fade` | Simple opacity fade | Minimal, subtle |
+| `router-tab-scale` | Zoom in/out effect | Dramatic transitions |
+| `router-tab-flip` | 3D flip animation | Modern, creative |
+| `router-tab-rotate` | Rotation with scale | Playful, dynamic |
+| `router-tab-bounce` | Elastic bounce | Fun, energetic |
+
+## 🎭 Theming
+
+### Built-in Themes
+
+```ts
+import { setRouterTabsTheme } from 'vue3-router-tab'
+
+// Switch themes at runtime
+setRouterTabsTheme('dark')
+setRouterTabsTheme('light')
+setRouterTabsTheme('system') // Follows OS preference
+```
+
+### Custom Colors
+
+```ts
+import { setRouterTabsPrimary } from 'vue3-router-tab'
+
+setRouterTabsPrimary({
+  primary: '#3b82f6',
+  background: '#ffffff',
+  text: '#1f2937',
+  activeBackground: '#3b82f6',
+  activeText: '#ffffff',
+  border: '#e5e7eb'
+})
+```
+
+### CSS Customization
+
+```css
+:root {
+  /* Layout */
+  --router-tab-header-height: 48px;
+  --router-tab-padding: 16px;
+
+  /* Colors */
+  --router-tab-primary: #3b82f6;
+  --router-tab-background: #ffffff;
+  --router-tab-active-background: #3b82f6;
+}
+```
+
+## ♿ Accessibility
+
+Vue3 Router Tab is fully accessible with:
+
+- **ARIA Labels**: Proper labeling for screen readers
+- **Keyboard Navigation**: Arrow keys, Enter, Delete, Home, End
+- **Focus Management**: Logical tab order and focus indicators
+- **Semantic HTML**: Proper roles and structure
+
+```vue
+<!-- Accessible by default -->
+<router-tab />
+
+<!-- Custom ARIA labels -->
+<router-tab aria-label="Main navigation tabs" />
+```
+
+### Keyboard Shortcuts
+
+- **Arrow Keys**: Navigate between tabs
+- **Enter/Space**: Activate selected tab
+- **Delete/Backspace**: Close current tab (if closable)
+- **Home/End**: Jump to first/last tab
+
+## 🔧 API Reference
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `tabs` | `TabInput[]` | `[]` | Initial tabs to display |
+| `keepAlive` | `boolean` | `true` | Enable KeepAlive for tab components |
+| `maxAlive` | `number` | `0` | Maximum cached components (0 = unlimited) |
+| `keepLastTab` | `boolean` | `true` | Prevent closing the last tab |
+| `append` | `'last' \| 'next'` | `'last'` | Position for new tabs |
+| `defaultPage` | `RouteLocationRaw` | `'/'` | Default route |
+| `tabTransition` | `TransitionLike` | `'router-tab-zoom'` | Tab list transitions |
+| `pageTransition` | `TransitionLike` | `{ name: 'router-tab-swap', mode: 'out-in' }` | Page transitions |
+| `contextmenu` | `boolean \| RouterTabsMenuConfig[]` | `true` | Context menu configuration |
+| `cookieKey` | `string` | `'router-tabs:snapshot'` | Persistence cookie key |
+| `persistence` | `RouterTabsPersistenceOptions \| null` | `null` | Advanced persistence options |
+| `sortable` | `boolean` | `true` | Enable drag-and-drop sorting |
+
+### Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `tab-sort` | `{ tab: TabRecord, index: number }` | Tab drag started |
+| `tab-sorted` | `{ tab: TabRecord, fromIndex: number, toIndex: number }` | Tab reordered |
+
+### Slots
+
+| Slot | Props | Description |
+|------|-------|-------------|
+| `start` | - | Content before tab list |
+| `end` | - | Content after tab list |
+| `default` | `{ Component, route }` | Custom page rendering |
+
+## 🎛️ Programmatic API
+
+### Using the Composable
+
+```vue
+<script setup lang="ts">
+import { useRouterTabs } from 'vue3-router-tab'
+
+const tabs = useRouterTabs()
+
+// Open a new tab
+await tabs.openTab('/users')
+
+// Close current tab
+await tabs.closeTab()
+
+// Refresh all tabs
+await tabs.refreshAll()
+
+// Get current tab info
+console.log(tabs.activeId.value) // Current active tab ID
+console.log(tabs.tabs) // All tabs array
+</script>
+```
+
+### Controller Methods
+
+```ts
+interface RouterTabsContext {
+  // Navigation
+  openTab(to: RouteLocationRaw, replace?: boolean, refresh?: boolean | 'sameTab'): Promise<void>
+  closeTab(id?: string, options?: CloseTabOptions): Promise<void>
+
+  // Management
+  refreshTab(id?: string, force?: boolean): Promise<void>
+  refreshAll(force?: boolean): Promise<void>
+  removeTab(id: string, opts?: RemoveTabOptions): Promise<void>
+
+  // Cache Control
+  setTabAlive(id: string, alive: boolean): void
+  evictCache(id: string): void
+  clearCache(): void
+  getCacheKeys(): string[]
+
+  // State
+  reset(route?: RouteLocationRaw): Promise<void>
+  reload(): Promise<void>
+
+  // Utilities
+  getRouteKey(route: RouteLocationNormalizedLoaded | RouteLocationRaw): string
+  matchRoute(route: RouteLocationNormalizedLoaded | RouteLocationRaw): RouteMatchResult
+
+  // Persistence
+  snapshot(): RouterTabsSnapshot
+  hydrate(snapshot: RouterTabsSnapshot): Promise<void>
+}
+```
+
+## 🔄 Advanced Usage
+
+### Custom Context Menu
+
+```vue
+<router-tab
+  :contextmenu="[
+    'refresh',
+    'close',
+    { id: 'duplicate', label: 'Duplicate Tab', handler: ({ target }) => openTab(target.to) },
+    { id: 'closeOthers', label: 'Close All Others' },
+    {
+      id: 'openExternal',
+      label: 'Open in New Window',
+      handler: ({ target }) => window.open(target.to, '_blank')
+    }
+  ]"
+/>
+```
+
+### Custom Rendering
+
+```vue
+<router-tab>
+  <template #default="{ Component, route }">
+    <Suspense>
+      <ErrorBoundary>
+        <component :is="Component" :key="route.fullPath" />
+      </ErrorBoundary>
+    </Suspense>
+  </template>
+</router-tab>
+```
+
+### Advanced Persistence
+
+```vue
+<router-tab
+  :persistence="{
+    cookieKey: 'my-app-tabs',
+    expiresInDays: 30,
+    path: '/',
+    secure: true,
+    sameSite: 'strict',
+    serialize: (snapshot) => encrypt(JSON.stringify(snapshot)),
+    deserialize: (data) => JSON.parse(decrypt(data))
+  }"
+/>
+```
+
+## 🧩 Composables
+
+### useReactiveTab
+
+```vue
+<script setup lang="ts">
+import { useReactiveTab } from 'vue3-router-tab'
+
+const { routeTabTitle, routeTabIcon, routeTabClosable } = useReactiveTab({
+  title: 'Dashboard',
+  icon: 'mdi-view-dashboard',
+  closable: true
+})
+</script>
+```
+
+### useLoadingTab
+
+```vue
+<script setup lang="ts">
+import { useLoadingTab } from 'vue3-router-tab'
+
+const isLoading = ref(false)
+const { routeTabTitle, routeTabIcon, routeTabClosable } = useLoadingTab(isLoading, 'Dashboard')
+</script>
+```
+
+### useNotificationTab
+
+```vue
+<script setup lang="ts">
+import { useNotificationTab } from 'vue3-router-tab'
+
+const notificationCount = ref(0)
+const { routeTabTitle, routeTabIcon } = useNotificationTab(notificationCount, 'Messages')
+</script>
+```
+
+## 🎯 Examples
+
+### Complete App Example
+
+```vue
+<template>
+  <div id="app">
+    <nav>
+      <router-link to="/">Home</router-link>
+      <router-link to="/users">Users</router-link>
+      <router-link to="/settings">Settings</router-link>
+    </nav>
+
+    <router-tab
+      cookie-key="my-app"
+      :sortable="true"
+      page-transition="router-tab-fade"
+      @tab-sorted="onTabSorted"
+    />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { useRouterTabs } from 'vue3-router-tab'
+
+const tabs = useRouterTabs()
+
+function onTabSorted({ tab, fromIndex, toIndex }) {
+  console.log(`Tab "${tab.title}" moved from ${fromIndex} to ${toIndex}`)
+  // Save order to backend
+  saveTabOrder(tab.id, toIndex)
+}
+</script>
+```
+
+### Real-time Updates
+
+```vue
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useRouterTabs } from 'vue3-router-tab'
+
+const tabs = useRouterTabs()
+const messageCount = ref(0)
+const isOnline = ref(true)
+
+// Reactive tab title
+const routeTabTitle = computed(() =>
+  messageCount.value > 0 ? `Messages (${messageCount.value})` : 'Messages'
+)
+
+// Reactive tab icon
+const routeTabIcon = computed(() =>
+  isOnline.value ? 'mdi-message' : 'mdi-message-offline'
+)
+
+// Simulate real-time updates
+onMounted(() => {
+  // Connect to WebSocket or polling service
+  connectToRealtimeUpdates((update) => {
+    if (update.type === 'message') {
+      messageCount.value++
+    } else if (update.type === 'status') {
+      isOnline.value = update.online
+    }
+  })
+})
+</script>
+```
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+**Tabs not updating titles**
+- Ensure you're using `ref()` or `computed()` for reactive properties
+- Check that properties are properly exposed in `<script setup>`
+
+**Transitions not working**
+- Don't use custom `#default` slot without transitions
+- Ensure transition names match available transitions
+
+**Persistence not working**
+- Check that cookies are enabled
+- Verify `cookie-key` prop is set
+- Check browser console for cookie errors
+
+**KeepAlive not preserving state**
+- Ensure routes have `keepAlive: true` in meta
+- Check that components have unique keys
+
+**TypeScript errors**
+```ts
+import type { TabRecord, RouterTabsOptions } from 'vue3-router-tab'
+```
+
+### Performance Tips
+
+- Use `maxAlive` to limit cached components
+- Avoid deep watchers in tab components
+- Use `evictCache()` to manually clear cache when needed
+- Consider using `keepAlive: false` for memory-intensive components
+
+## 🌟 Migration Guide
+
+### From v1.x to v2.x
+
+```ts
+// Before
+import RouterTab from 'vue3-router-tab'
+
+// After (same)
+import RouterTab from 'vue3-router-tab'
+```
+
+The API is backward compatible. New features are additive.
+
+## 📱 Browser Support
+
+- **Chrome**: 90+
+- **Firefox**: 88+
+- **Safari**: 14+
+- **Edge**: 90+
+- **Mobile**: iOS Safari 14+, Chrome Mobile 90+
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes
+4. Add tests if applicable
+5. Run the build: `npm run build`
+6. Commit your changes: `git commit -m 'Add amazing feature'`
+7. Push to the branch: `git push origin feature/amazing-feature`
+8. Open a Pull Request
+
+## 📄 License
+
+MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+Built with ❤️ by the Vue.js community. Special thanks to all contributors and users.
+
+---
+
+**Made with ❤️ for the Vue.js ecosystem**
 
 `meta.key` accepts the shortcuts `fullPath`, `path`, or `name`, or you can supply your own function.
 
