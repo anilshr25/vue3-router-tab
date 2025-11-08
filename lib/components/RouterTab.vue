@@ -53,50 +53,40 @@
     </header>
 
     <div class="router-tab__container">
-      <RouterView v-slot="routerSlot">
+      <RouterView v-slot="{ Component, route }">
         <template v-if="hasCustomSlot">
           <slot
             v-bind="{
-              ...routerSlot,
+              Component,
+              route,
               controller,
-              // Expose a ref binder so custom slots can keep reactivity
-              pageRef: (el: any) => handleComponentRef(el, controller.getRouteKey(routerSlot.route))
+              pageRef: (el: any) => handleComponentRef(el, controller.getRouteKey(route))
             }"
           />
         </template>
         <template v-else>
-          <transition
-            v-bind="pageTransitionProps"
-            appear
-          >
-            <component
-              v-if="isRefreshing(routerSlot.route)"
-              :is="routerSlot.Component"
-              :key="getRefreshComponentKey(routerSlot.route)"
-              :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(routerSlot.route))"
-              class="router-tab-page"
-            />
-            <KeepAlive
-              v-else-if="controller.options.keepAlive"
-              :include="includeKeys"
-              :max="controller.options.maxAlive || undefined"
-            >
+          <template v-if="controller.options.keepAlive">
+            <KeepAlive :include="includeKeys">
               <component
-                v-if="isTabReady(routerSlot.route)"
-                :is="routerSlot.Component"
-                :key="getComponentCacheKey(routerSlot.route)"
-                :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(routerSlot.route))"
+                v-if="Component"
+                :is="ensureNamedComponent(Component, controller.getRouteKey(route))"
+                :key="controller.getRouteKey(route)"
+                :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(route))"
                 class="router-tab-page"
               />
             </KeepAlive>
-            <component
-              v-else-if="isTabReady(routerSlot.route)"
-              :is="routerSlot.Component"
-              :key="getComponentCacheKey(routerSlot.route)"
-              :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(routerSlot.route))"
-              class="router-tab-page"
-            />
-          </transition>
+          </template>
+          <template v-else>
+            <transition v-bind="pageTransitionProps" appear>
+              <component
+                v-if="Component"
+                :is="Component"
+                :key="controller.getRouteKey(route)"
+                :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(route))"
+                class="router-tab-page"
+              />
+            </transition>
+          </template>
         </template>
       </RouterView>
     </div>
@@ -133,6 +123,7 @@ import {
   computed,
   defineComponent,
   getCurrentInstance,
+  h,
   nextTick,
   onBeforeUnmount,
   onErrorCaptured,
@@ -435,23 +426,8 @@ export default defineComponent({
     onErrorCaptured((err, instance, info) => {
       console.error('[RouterTab] Error captured from component:', err, info)
       
-      // Try to find the route key for the erroring component
-      if (instance && controller.activeId.value) {
-        const routeKey = controller.activeId.value
-        
-        // Clean up the component instance to prevent stale state
-        cleanupComponentWatching(routeKey)
-        
-        // Remove from KeepAlive cache if it's cached
-        const tab = controller.tabs.find(t => t.id === routeKey)
-        if (tab && tab.alive) {
-          console.warn(`[RouterTab] Removing errored component ${routeKey} from KeepAlive cache`)
-          tab.alive = false
-          nextTick(() => {
-            tab.alive = true
-          })
-        }
-      }
+      // Just log the error, don't try to manipulate the cache
+      // as it can cause infinite loops with KeepAlive
       
       // Return false to propagate the error to parent
       return false
@@ -798,21 +774,106 @@ export default defineComponent({
       return reactiveTitles[tab.id] || getTabTitle(tab)
     }
 
+    /**
+     * Creates a wrapper component with a specific name for KeepAlive caching.
+     * This is necessary because KeepAlive's include prop matches component names.
+     */
+    function createNamedComponent(component: any, name: string) {
+      return defineComponent({
+        name,
+        setup(_, { attrs, slots }) {
+          return () => h(component, attrs, slots)
+        }
+      })
+    }
+
+    // Cache for component references from RouterView (non-reactive to avoid circular reference issues)
+    const componentCache = new Map<string, any>()
+    const componentCacheTrigger = ref(0) // Trigger reactivity manually
+
+    /**
+     * Cache the current component without triggering infinite loops.
+     * Called from ref callback, only caches once per route key.
+     */
+    function cacheCurrentComponent(el: any, component: any, key: string): void {
+      if (!componentCache.has(key)) {
+        componentCache.set(key, component)
+        componentCacheTrigger.value++
+      }
+      // Always handle the component ref to set up watchers
+      if (el) {
+        handleComponentRef(el, key)
+      }
+    }
+
+    /**
+     * Ensures a component has a name for KeepAlive to cache properly.
+     * Assigns the cache key as the component's name directly.
+     */
+    function ensureNamedComponent(component: any, cacheKey: string) {
+      if (!component) return component
+      
+      // Directly assign the name to the component
+      // This mutates the component but is necessary for KeepAlive matching
+      if (!component.name || component.name !== cacheKey) {
+        component.name = cacheKey
+      }
+      
+      return component
+    }
+
+    /**
+     * Determines if a route should be rendered.
+     * Used to control which component is visible within KeepAlive.
+     */
+    function shouldRenderRoute(route: RouteLocationNormalizedLoaded): boolean {
+      const currentRouteKey = controller.getRouteKey(route)
+      const currentRoute = router.currentRoute.value
+      const activeRouteKey = controller.getRouteKey(currentRoute)
+      
+      return currentRouteKey === activeRouteKey
+    }
+
+    /**
+     * Generates the KeepAlive cache key for a component.
+     * Format: `{routeKey}::{renderKey}`
+     * 
+     * Example: '/quiz-results::0' (first mount), '/quiz-results::1' (after refresh)
+     * 
+     * The renderKey is incremented on manual refresh to force component recreation.
+     * Stable renderKey during navigation allows KeepAlive to preserve component state.
+     */
     function getComponentCacheKey(route: RouteLocationNormalizedLoaded): string {
       const routeKey = controller.getRouteKey(route)
       const tab = controller.tabs.find(item => item.id === routeKey)
       
-      // If tab doesn't exist yet, ensure it's created
       if (!tab) {
-        // This shouldn't happen, but handle it gracefully
         console.warn('[RouterTab] Tab not found for route:', routeKey)
         return `${routeKey}::0`
       }
       
       const renderKey = tab.renderKey ?? 0
-      return `${routeKey}::${renderKey}`
+      const cacheKey = `${routeKey}::${renderKey}`
+      
+      // Debug logging for specific routes
+      if (routeKey.includes('students') || routeKey.includes('classroom') || routeKey.includes('quiz')) {
+        console.log(`[getComponentCacheKey] Route: ${route.fullPath}`, {
+          routeKey,
+          renderKey,
+          cacheKey,
+          tabAlive: tab.alive,
+          includeKeys: includeKeys.value,
+          isIncluded: includeKeys.value.includes(cacheKey)
+        })
+      }
+      
+      return cacheKey
     }
 
+    /**
+     * Generates a special key for components in refreshing state.
+     * Appends '::refresh' to ensure it's treated as separate from cached instance.
+     */
     function getRefreshComponentKey(route: RouteLocationNormalizedLoaded): string {
       return `${getComponentCacheKey(route)}::refresh`
     }
@@ -894,14 +955,21 @@ export default defineComponent({
       return controller.refreshingKey.value === controller.getRouteKey(route)
     }
 
+    function isTabCached(route: RouteLocationNormalizedLoaded) {
+      const routeKey = controller.getRouteKey(route)
+      const tab = controller.tabs.find(tab => tab.id === routeKey)
+      return tab ? tab.alive : false
+    }
+
     function isTabReady(route: RouteLocationNormalizedLoaded) {
       const routeKey = controller.getRouteKey(route)
       const tab = controller.tabs.find(tab => tab.id === routeKey)
+      
       if (!tab) return false
       
-      // If KeepAlive is enabled, only render if tab is marked as alive (included in cache)
-      // If KeepAlive is disabled, render if tab exists
-      return controller.options.keepAlive ? tab.alive : true
+      // Always return true - let KeepAlive handle the caching logic
+      // The tab exists in the tabs array, so it should be rendered
+      return true
     }
 
     // Drag and drop handlers
@@ -1060,6 +1128,9 @@ export default defineComponent({
       controller,
       tabs: controller.tabs,
       includeKeys,
+      componentCache,
+      componentCacheTrigger,
+      cacheCurrentComponent,
       tabTransitionProps,
       pageTransitionProps,
       buildTabClass,
@@ -1073,6 +1144,7 @@ export default defineComponent({
       getTabTitle,
       isClosable,
       isRefreshing,
+      isTabCached,
       isTabReady,
       hasCustomSlot,
       hasStartSlot,
@@ -1089,6 +1161,9 @@ export default defineComponent({
       getReactiveTabTitle,
       getComponentCacheKey,
       getRefreshComponentKey,
+      createNamedComponent,
+      ensureNamedComponent,
+      shouldRenderRoute,
       triggerTabUpdate,
       menuRef,
       highlightedIndex,

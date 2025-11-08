@@ -117,14 +117,33 @@ function insertTab(tabs: TabRecord[], tab: TabRecord, position: 'last' | 'next',
   tabs.push(tab)
 }
 
-function enforceMaxAlive(tabs: TabRecord[], maxAlive: number, activeId: string | null) {
+/**
+ * Enforces the maximum number of alive (cached) tabs.
+ * When exceeded, removes the oldest tabs from KeepAlive cache.
+ */
+function enforceMaxAlive(
+  tabs: TabRecord[], 
+  maxAlive: number, 
+  activeId: string | null,
+  aliveCache: Set<string>
+) {
   if (!maxAlive || maxAlive <= 0) return
+  
   const aliveTabs = tabs.filter(tab => tab.alive)
+  
   while (aliveTabs.length > maxAlive) {
     const candidate = aliveTabs.shift()
     if (!candidate || candidate.id === activeId) continue
+    
     const idx = tabs.findIndex(tab => tab.id === candidate.id)
-    if (idx > -1) tabs[idx].alive = false
+    if (idx > -1) {
+      const tab = tabs[idx]
+      const cacheKey = `${tab.id}::${tab.renderKey ?? 0}`
+      
+      // Remove from cache and mark as not alive
+      aliveCache.delete(cacheKey)
+      tab.alive = false
+    }
   }
 }
 
@@ -163,11 +182,16 @@ export function createRouterTabs(
   const activeId = ref<string | null>(null)
   const current = shallowRef<TabRecord>()
   const refreshingKey = ref<string | null>(null)
-  const includeKeys = computed(() =>
-    tabs
-      .filter(tab => tab.alive)
-      .map(tab => `${tab.id}::${tab.renderKey ?? 0}`)
-  )
+  
+  // Track which keys should be in KeepAlive cache
+  // This is the source of truth for KeepAlive's include prop
+  const aliveCache = reactive<Set<string>>(new Set())
+  
+  const includeKeys = computed(() => {
+    // Convert Set to Array for KeepAlive's include prop
+    // Format: ['routeKey::renderKey', ...]
+    return Array.from(aliveCache)
+  })
 
   let isHydrating = false
 
@@ -186,31 +210,86 @@ export function createRouterTabs(
     }
   }
 
+  /**
+   * Ensures a tab exists for the given route and manages its KeepAlive cache state.
+   * This is called on every route navigation via the router watcher.
+   */
   function ensureTab(route: RouteLocationNormalizedLoaded) {
     const key = resolveKey(route)
     let tab = tabs.find(item => item.id === key)
+    const shouldBeAlive = resolveAlive(route, options.keepAlive)
 
     if (tab) {
+      // Tab exists - update its properties
       tab.fullPath = route.fullPath
       tab.to = route.fullPath
       tab.matched = route
-      tab.alive = resolveAlive(route, options.keepAlive)
       tab.reusable = resolveReusable(route, tab.reusable)
+      
       // Ensure renderKey is initialized
       if (typeof tab.renderKey !== 'number') {
         tab.renderKey = 0
       }
+      
+      // Generate the current cache key for this tab
+      const currentCacheKey = `${key}::${tab.renderKey}`
+      
+      // Debug logging for specific routes
+      if (key.includes('students') || key.includes('classroom') || key.includes('quiz')) {
+        console.log(`[ensureTab] EXISTING tab: ${route.fullPath}`, {
+          key,
+          shouldBeAlive,
+          currentRenderKey: tab.renderKey,
+          currentCacheKey,
+          isInCache: aliveCache.has(currentCacheKey),
+          aliveCacheSize: aliveCache.size,
+          cacheContents: Array.from(aliveCache)
+        })
+      }
+      
+      // Manage KeepAlive cache state
+      if (shouldBeAlive) {
+        // Check if tab's current key is in the cache
+        if (!aliveCache.has(currentCacheKey)) {
+          // Tab was evicted or never added to cache - add it back
+          aliveCache.add(currentCacheKey)
+          tab.alive = true
+          if (key.includes('students') || key.includes('classroom') || key.includes('quiz')) {
+            console.log(`[ensureTab] ✅ Added to cache: ${currentCacheKey}`)
+          }
+        } else if (!tab.alive) {
+          // Tab is in cache but marked as not alive - just reactivate
+          tab.alive = true
+          if (key.includes('students') || key.includes('classroom') || key.includes('quiz')) {
+            console.log(`[ensureTab] ✅ Reactivated: ${currentCacheKey}`)
+          }
+        }
+      }
+      
       Object.assign(tab, pickMeta(route))
       return tab
     }
 
+    // Create new tab
     tab = createTabFromRoute(route, {}, options.keepAlive)
+    
+    // Add to cache if it should be alive
+    if (tab.alive) {
+      const cacheKey = `${key}::${tab.renderKey ?? 0}`
+      aliveCache.add(cacheKey)
+      
+      if (key.includes('students') || key.includes('classroom') || key.includes('quiz')) {
+        console.log(`[ensureTab] NEW tab created and cached: ${cacheKey}`)
+      }
+    }
+    
     insertTab(tabs, tab, options.appendPosition, activeId.value)
-    enforceMaxAlive(tabs, options.maxAlive, activeId.value)
+    enforceMaxAlive(tabs, options.maxAlive, activeId.value, aliveCache)
+    
     return tab
   }
 
-  async function openTab(path: RouteLocationRaw, replace = false, refresh: boolean | 'sameTab' = true) {
+  async function openTab(path: RouteLocationRaw, replace = false, refresh: boolean | 'sameTab' = 'sameTab') {
     const target = resolveRoute(router, path)
     const targetKey = resolveKey(target)
     const sameKey = activeId.value === targetKey
@@ -278,37 +357,50 @@ export function createRouterTabs(
     }
   }
 
+  /**
+   * Refreshes a tab by incrementing its renderKey and cycling its KeepAlive state.
+   * This forces the component to unmount and remount, clearing all internal state.
+   * 
+   * @param id - The tab ID to refresh. Defaults to the currently active tab.
+   * @param force - If true, skips transition delays for immediate refresh.
+   */
   async function refreshTab(id: string | undefined = activeId.value ?? undefined, force = false) {
     if (!id) return
+    
     const tab = tabs.find(item => item.id === id)
     if (!tab) return
 
-    const wasAlive = options.keepAlive && tab.alive
+    const shouldRestoreCache = options.keepAlive && tab.alive
+    const oldCacheKey = `${id}::${tab.renderKey ?? 0}`
 
-    // Remove from KeepAlive cache if it was alive
-    if (wasAlive) {
+    // Step 1: Remove from KeepAlive cache to prepare for fresh mount
+    if (shouldRestoreCache) {
+      aliveCache.delete(oldCacheKey)
       tab.alive = false
       await nextTick()
     }
 
-    // Increment render key to force re-render
+    // Step 2: Increment renderKey to generate new cache key (e.g., /quiz::0 → /quiz::1)
+    // This ensures KeepAlive treats it as a completely new component instance
     tab.renderKey = (tab.renderKey ?? 0) + 1
+    const newCacheKey = `${id}::${tab.renderKey}`
 
-    // Restore to KeepAlive cache
-    if (wasAlive) {
+    // Step 3: Restore to KeepAlive cache with new renderKey
+    if (shouldRestoreCache) {
+      aliveCache.add(newCacheKey)
       tab.alive = true
     }
 
-    // Set refreshing state to trigger component unmount with transition
+    // Step 4: Trigger transition by marking tab as refreshing
     refreshingKey.value = id
     await nextTick()
     
-    // Wait for unmount transition and new component mount
+    // Step 5: Allow transition to complete unless force refresh
     if (!force) {
       await nextTick()
     }
     
-    // Clear refreshing state to show the new component
+    // Step 6: Clear refreshing state to render the refreshed component
     refreshingKey.value = null
   }
 
@@ -322,22 +414,43 @@ export function createRouterTabs(
   function setTabAlive(id: string, alive: boolean) {
     const tab = tabs.find(t => t.id === id)
     if (!tab) return
-    tab.alive = Boolean(alive)
-    // enforce max alive if turning alive on
-    if (tab.alive) enforceMaxAlive(tabs, options.maxAlive, activeId.value)
+    
+    const cacheKey = `${id}::${tab.renderKey ?? 0}`
+    
+    if (alive) {
+      aliveCache.add(cacheKey)
+      tab.alive = true
+      // enforce max alive if turning alive on
+      enforceMaxAlive(tabs, options.maxAlive, activeId.value, aliveCache)
+    } else {
+      aliveCache.delete(cacheKey)
+      tab.alive = false
+    }
   }
 
-  // Evict a tab from the KeepAlive cache and increment renderKey so it mounts fresh
+  /**
+   * Evicts a tab from KeepAlive cache and increments its renderKey.
+   * When the tab is re-activated, it will mount as a fresh component instance.
+   * 
+   * @param id - The tab ID to evict from cache.
+   */
   function evictCache(id: string) {
     const tab = tabs.find(t => t.id === id)
     if (!tab) return
-    if (tab.alive) tab.alive = false
-    // bump renderKey to ensure a fresh key when re-enabled
+    
+    const oldCacheKey = `${id}::${tab.renderKey ?? 0}`
+    
+    // Remove from cache
+    aliveCache.delete(oldCacheKey)
+    tab.alive = false
+    
+    // Increment renderKey to ensure fresh mount on next activation
     tab.renderKey = (tab.renderKey ?? 0) + 1
   }
 
   // Clear keep-alive for all tabs
   function clearCache() {
+    aliveCache.clear()
     tabs.forEach(tab => {
       tab.alive = false
     })
@@ -420,7 +533,7 @@ export function createRouterTabs(
       const tab = ensureTab(route as RouteLocationNormalizedLoaded)
       activeId.value = tab.id
       current.value = tab
-      enforceMaxAlive(tabs, options.maxAlive, activeId.value)
+      enforceMaxAlive(tabs, options.maxAlive, activeId.value, aliveCache)
     },
     { immediate: true }
   )
