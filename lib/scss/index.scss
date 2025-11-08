@@ -70,7 +70,28 @@
     position: relative;
     flex: 1 1 0px;
     height: 100%;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--router-tab-border) transparent;
+
+    &::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--router-tab-border);
+      border-radius: 2px;
+
+      &:hover {
+        background: color-mix(in srgb, var(--router-tab-primary) 50%, transparent);
+      }
+    }
 
     &-container {
       width: 100%;

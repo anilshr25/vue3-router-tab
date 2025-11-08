@@ -28,6 +28,8 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
+
 const headers = [
   { title: 'Order ID', key: 'id' },
   { title: 'Customer', key: 'customer' },
@@ -51,4 +53,7 @@ const getStatusColor = (status: string) => {
   }
   return colors[status] || 'grey'
 }
+onMounted(() => {
+  console.log('📦 Orders page mounted')
+})
 </script>

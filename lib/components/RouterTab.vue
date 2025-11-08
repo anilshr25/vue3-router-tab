@@ -8,7 +8,7 @@
         <slot name="start" />
       </div>
 
-      <div class="router-tab__scroll">
+      <div class="router-tab__scroll" ref="scrollContainer">
         <transition-group
           tag="ul"
           class="router-tab__nav"
@@ -20,6 +20,7 @@
             :class="buildTabClass(tab)"
             :data-title="getTabTitle(tab)"
             :draggable="sortable"
+            :ref="(el) => setTabRef(tab.id, el as HTMLElement)"
             @click="activate(tab)"
             @auxclick.middle.prevent="close(tab)"
             @contextmenu.prevent="showContextMenu(tab, $event)"
@@ -480,6 +481,8 @@ export default defineComponent({
     const menuRef = ref<HTMLElement | null>(null)
     const menuItemRefs = ref<(HTMLElement | null)[]>([])
     const highlightedIndex = ref(-1)
+    const scrollContainer = ref<HTMLElement | null>(null)
+    const tabRefs = new Map<string, HTMLElement>()
 
     // Drag and drop state
     const dragState = reactive({
@@ -824,6 +827,41 @@ export default defineComponent({
       await controller.closeTab(tab.id)
     }
 
+    // Store tab element references for scroll-into-view
+    function setTabRef(tabId: string, el: HTMLElement | null) {
+      if (el) {
+        tabRefs.set(tabId, el)
+      } else {
+        tabRefs.delete(tabId)
+      }
+    }
+
+    // Scroll tab into view when activated
+    function scrollTabIntoView(tabId: string) {
+      nextTick(() => {
+        const tabEl = tabRefs.get(tabId)
+        const container = scrollContainer.value
+
+        if (tabEl && container) {
+          // Calculate if tab is within view
+          const tabRect = tabEl.getBoundingClientRect()
+          const containerRect = container.getBoundingClientRect()
+
+          // Check if tab is outside the visible area
+          const isOutOfView = tabRect.left < containerRect.left || tabRect.right > containerRect.right
+
+          if (isOutOfView) {
+            // Scroll the tab into view with smooth behavior
+            tabEl.scrollIntoView({
+              behavior: 'smooth',
+              block: 'nearest',
+              inline: 'nearest'
+            })
+          }
+        }
+      })
+    }
+
     function activate(tab: TabRecord) {
       if (tab.href && typeof window !== 'undefined') {
         if (tab.target && tab.target !== '_self') {
@@ -836,6 +874,7 @@ export default defineComponent({
 
       if (controller.activeId.value === tab.id) return
       controller.openTab(tab.to, false)
+      scrollTabIntoView(tab.id)
     }
 
     function buildTabClass(tab: TabRecord) {
@@ -857,7 +896,12 @@ export default defineComponent({
 
     function isTabReady(route: RouteLocationNormalizedLoaded) {
       const routeKey = controller.getRouteKey(route)
-      return controller.tabs.some(tab => tab.id === routeKey)
+      const tab = controller.tabs.find(tab => tab.id === routeKey)
+      if (!tab) return false
+      
+      // If KeepAlive is enabled, only render if tab is marked as alive (included in cache)
+      // If KeepAlive is disabled, render if tab exists
+      return controller.options.keepAlive ? tab.alive : true
     }
 
     // Drag and drop handlers
@@ -951,7 +995,12 @@ export default defineComponent({
 
     watch(
       () => controller.activeId.value,
-      () => hideContextMenu()
+      (newActiveId) => {
+        if (newActiveId) {
+          scrollTabIntoView(newActiveId)
+        }
+        hideContextMenu()
+      }
     )
 
     // Clean up stale component instances when tabs are closed
@@ -1045,7 +1094,10 @@ export default defineComponent({
       highlightedIndex,
       setMenuItemRef,
       onMenuKeydown,
-      highlightMenuIndex
+      highlightMenuIndex,
+      scrollContainer,
+      setTabRef,
+      scrollTabIntoView
     }
   }
 })
