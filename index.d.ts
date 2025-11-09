@@ -15,6 +15,28 @@ import type {
 } from './lib/core/types'
 import type { ColorStyle, RouterTabsThemeOptions } from './lib/theme'
 
+export interface RouterTabsPluginOptions {
+  /**
+   * Whether to initialise the theme system automatically during install.
+   * Defaults to `true`.
+   */
+  initTheme?: boolean
+  /**
+   * Theme options passed to `initRouterTabsTheme` when `initTheme` is enabled.
+   */
+  themeOptions?: RouterTabsThemeOptions
+  /**
+   * Global component name used when registering `RouterTab`.
+   * Defaults to the component's `name` option or `"RouterTab"`.
+   */
+  componentName?: string
+  /**
+   * Global component name used when registering `RouterTabs`.
+   * Defaults to the component's `name` option or `"RouterTabs"`.
+   */
+  tabsComponentName?: string
+}
+
 export type {
   TabRecord,
   TabInput,
@@ -95,7 +117,9 @@ export declare const RouterTab: DefineComponent<{
   persistence: RouterTabsPersistenceOptions | null
 }>
 
-export interface RouterTabPlugin extends Plugin {}
+export interface RouterTabPlugin {
+  install: (app: App, options?: RouterTabsPluginOptions) => void
+}
 
 declare const plugin: RouterTabPlugin
 
