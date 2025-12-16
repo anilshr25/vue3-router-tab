@@ -234,19 +234,6 @@ export function createRouterTabs(
       // Generate the current cache key for this tab
       const currentCacheKey = `${key}::${tab.renderKey}`
       
-      // Debug logging for specific routes
-      if (key.includes('students') || key.includes('classroom') || key.includes('quiz')) {
-        console.log(`[ensureTab] EXISTING tab: ${route.fullPath}`, {
-          key,
-          shouldBeAlive,
-          currentRenderKey: tab.renderKey,
-          currentCacheKey,
-          isInCache: aliveCache.has(currentCacheKey),
-          aliveCacheSize: aliveCache.size,
-          cacheContents: Array.from(aliveCache)
-        })
-      }
-      
       // Manage KeepAlive cache state
       if (shouldBeAlive) {
         // Check if tab's current key is in the cache
@@ -254,16 +241,15 @@ export function createRouterTabs(
           // Tab was evicted or never added to cache - add it back
           aliveCache.add(currentCacheKey)
           tab.alive = true
-          if (key.includes('students') || key.includes('classroom') || key.includes('quiz')) {
-            console.log(`[ensureTab] ✅ Added to cache: ${currentCacheKey}`)
-          }
         } else if (!tab.alive) {
           // Tab is in cache but marked as not alive - just reactivate
           tab.alive = true
-          if (key.includes('students') || key.includes('classroom') || key.includes('quiz')) {
-            console.log(`[ensureTab] ✅ Reactivated: ${currentCacheKey}`)
-          }
+         
         }
+      } else if (tab.alive) {
+        // Route no longer wants to be cached; drop from cache and mark inactive
+        aliveCache.delete(currentCacheKey)
+        tab.alive = false
       }
       
       Object.assign(tab, pickMeta(route))
@@ -277,10 +263,6 @@ export function createRouterTabs(
     if (tab.alive) {
       const cacheKey = `${key}::${tab.renderKey ?? 0}`
       aliveCache.add(cacheKey)
-      
-      if (key.includes('students') || key.includes('classroom') || key.includes('quiz')) {
-        console.log(`[ensureTab] NEW tab created and cached: ${cacheKey}`)
-      }
     }
     
     insertTab(tabs, tab, options.appendPosition, activeId.value)
@@ -344,6 +326,12 @@ export function createRouterTabs(
   ) {
     const index = tabs.findIndex(item => item.id === id)
     if (index === -1) return
+
+    const tab = tabs[index]
+    // Remove KeepAlive cache entry if present
+    const cacheKey = `${id}::${tab.renderKey ?? 0}`
+    aliveCache.delete(cacheKey)
+    tab.alive = false
 
     tabs.splice(index, 1)
 

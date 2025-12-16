@@ -318,9 +318,6 @@ await tabs.closeTab()
 // Refresh all tabs
 await tabs.refreshAll()
 
-// Get current tab info
-console.log(tabs.activeId.value) // Current active tab ID
-console.log(tabs.tabs) // All tabs array
 </script>
 ```
 
@@ -473,7 +470,6 @@ import { useRouterTabs } from 'vue3-router-tab'
 const tabs = useRouterTabs()
 
 function onTabSorted({ tab, fromIndex, toIndex }) {
-  console.log(`Tab "${tab.title}" moved from ${fromIndex} to ${toIndex}`)
   // Save order to backend
   saveTabOrder(tab.id, toIndex)
 }
@@ -1160,10 +1156,6 @@ import { useRouterTabs } from 'vue3-router-tab'
 
 const controller = useRouterTabs()
 
-// Access current state
-console.log(controller.tabs)           // Array of all tabs
-console.log(controller.activeId.value) // Current active tab ID
-console.log(controller.includeKeys)    // KeepAlive include keys
 </script>
 ```
 

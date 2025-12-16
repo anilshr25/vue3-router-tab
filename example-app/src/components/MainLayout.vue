@@ -98,13 +98,6 @@ const toggleTheme = () => {
   window.localStorage.setItem("tab-theme-style", themeStyle == "dark" ? "light" : "dark");
 };
 
-const handleLogout = () => {
-  console.log("Logout clicked");
-};
-
-const handleFooterLink = (link: string) => {
-  console.log("Footer link clicked:", link);
-};
 </script>
 
 <style>

@@ -17,6 +17,7 @@ const routes = [
           title: 'Dashboard',
           icon: 'fas fa-home',
           closable: false,
+          keepAlive: true,
         },
       },
       {
@@ -26,6 +27,7 @@ const routes = [
         meta: {
           title: 'Users',
           icon: 'fas fa-user',
+          keepAlive: true,
         },
       },
       {
@@ -35,6 +37,7 @@ const routes = [
         meta: {
           title: 'Products',
           icon: 'fas fa-bars',
+          keepAlive: true,
         },
       },
       {
@@ -44,6 +47,7 @@ const routes = [
         meta: {
           title: 'Orders',
           icon: 'fas fa-shopping-cart',
+          keepAlive: true,
         },
       },
       {
@@ -53,6 +57,7 @@ const routes = [
         meta: {
           title: 'Analytics',
           icon: 'fas fa-chart-line',
+          keepAlive: true,
         },
       },
       {
@@ -62,6 +67,7 @@ const routes = [
         meta: {
           title: 'Settings',
           icon: 'fas fa-cog',
+          keepAlive: true,
         },
       },
       {
@@ -71,6 +77,7 @@ const routes = [
         meta: {
           title: 'Profile',
           icon: 'fas fa-account',
+          keepAlive: true,
         },
       },
       {
@@ -80,6 +87,7 @@ const routes = [
         meta: {
           title: 'Then Demos',
           icon: 'mdi-test-tube',
+          keepAlive: true,
         },
       },
       {
@@ -89,6 +97,7 @@ const routes = [
         meta: {
           title: 'Advanced Demo',
           icon: 'mdi-rocket',
+          keepAlive: true,
         },
       },
       {
@@ -98,6 +107,7 @@ const routes = [
         meta: {
           title: 'Composable Demo',
           icon: 'mdi-puzzle',
+          keepAlive: true,
         },
       },
       {
@@ -107,6 +117,7 @@ const routes = [
         meta: {
           title: 'Transition Effects',
           icon: 'mdi-animation-play',
+          keepAlive: true,
         },
       },
       {
@@ -116,6 +127,7 @@ const routes = [
         meta: {
           title: 'Title Test',
           icon: 'mdi-format-title',
+          keepAlive: true,
         },
       },
       {
@@ -125,6 +137,7 @@ const routes = [
         meta: {
           title: 'Cache Control',
           icon: 'mdi-database-refresh',
+          keepAlive: true,
         },
       },
       {
@@ -134,12 +147,16 @@ const routes = [
         meta: {
           title: 'Blank Page Diagnostics',
           icon: 'mdi-bug-check',
+          keepAlive: true,
         },
       },
       {
         path: '/:pathMatch(.*)*',
         name: 'NotFound',
         component: () => import('./views/NotFound.vue'),
+        meta: {
+          keepAlive: false,
+        },
       },
 
     ],

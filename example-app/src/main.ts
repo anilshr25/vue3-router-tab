@@ -2,7 +2,7 @@ import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./router";
 
-import RouterTab from "vue3-router-tab";
+import RouterTab from "../../lib/index";
 
 import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'

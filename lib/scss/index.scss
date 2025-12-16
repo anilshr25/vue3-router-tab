@@ -131,8 +131,7 @@
     color: var(--router-tab-text);
     font-size: var(--router-tab-font-size);
     background-color: transparent;
-    border: none;
-    border-right: 1px solid var(--router-tab-border);
+    border: 1px solid var(--router-tab-border);
     cursor: pointer;
     user-select: none;
     transition: var(--router-tab-transition);

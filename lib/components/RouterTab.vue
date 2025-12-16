@@ -69,8 +69,8 @@
             <KeepAlive :include="includeKeys">
               <component
                 v-if="Component"
-                :is="ensureNamedComponent(Component, controller.getRouteKey(route))"
-                :key="controller.getRouteKey(route)"
+                :is="getNamedComponent(Component, getComponentCacheKey(route))"
+                :key="isRefreshing(route) ? getRefreshComponentKey(route) : getComponentCacheKey(route)"
                 :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(route))"
                 class="router-tab-page"
               />
@@ -823,6 +823,21 @@ export default defineComponent({
     }
 
     /**
+     * Returns a component wrapper with a stable name for KeepAlive include matching.
+     * Caches the wrapper per cacheKey to avoid recreating components on each render.
+     */
+    function getNamedComponent(component: any, cacheKey: string) {
+      if (!component) return component
+      const cached = componentCache.get(cacheKey)
+      if (cached) return cached
+
+      const wrapped = createNamedComponent(component, cacheKey)
+      componentCache.set(cacheKey, wrapped)
+      componentCacheTrigger.value++
+      return wrapped
+    }
+
+    /**
      * Determines if a route should be rendered.
      * Used to control which component is visible within KeepAlive.
      */
@@ -1163,6 +1178,7 @@ export default defineComponent({
       getRefreshComponentKey,
       createNamedComponent,
       ensureNamedComponent,
+      getNamedComponent,
       shouldRenderRoute,
       triggerTabUpdate,
       menuRef,

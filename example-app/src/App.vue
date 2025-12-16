@@ -56,8 +56,8 @@ const setTabThemeStyle = () => {
   watch(
     () => themeStyle.current.value,
     () => {
-      console.log("Theme changed", themeStyle.current.value.dark);
       setRouterTabsTheme(window.localStorage.getItem("tab-theme-style"));
+      
       setRouterTabsPrimary(themeStyle.current.value.dark ? defaultDarkColor : defaultColors);
     },
     { immediate: true }
