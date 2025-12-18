@@ -70,7 +70,7 @@
               <component
                 v-if="Component"
                 :is="getNamedComponent(Component, getComponentCacheKey(route))"
-                :key="isRefreshing(route) ? getRefreshComponentKey(route) : getComponentCacheKey(route)"
+                :key="getComponentCacheKey(route)"
                 :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(route))"
                 class="router-tab-page"
               />
@@ -888,14 +888,6 @@ export default defineComponent({
       return cacheKey
     }
 
-    /**
-     * Generates a special key for components in refreshing state.
-     * Appends '::refresh' to ensure it's treated as separate from cached instance.
-     */
-    function getRefreshComponentKey(route: RouteLocationNormalizedLoaded): string {
-      return `${getComponentCacheKey(route)}::refresh`
-    }
-
     function isClosable(tab: TabRecord) {
       if (tab.closable === false) return false
       if (controller.options.keepLastTab && controller.tabs.length <= 1) return false
@@ -967,10 +959,6 @@ export default defineComponent({
         },
         tab.tabClass
       ]
-    }
-
-    function isRefreshing(route: RouteLocationNormalizedLoaded) {
-      return controller.refreshingKey.value === controller.getRouteKey(route)
     }
 
     function isTabCached(route: RouteLocationNormalizedLoaded) {
@@ -1162,7 +1150,6 @@ export default defineComponent({
       hideContextMenu,
       getTabTitle,
       isClosable,
-      isRefreshing,
       isTabCached,
       isTabReady,
       hasCustomSlot,
@@ -1179,7 +1166,6 @@ export default defineComponent({
       handleComponentRef,
       getReactiveTabTitle,
       getComponentCacheKey,
-      getRefreshComponentKey,
       createNamedComponent,
       ensureNamedComponent,
       getNamedComponent,

@@ -1,6 +1,6 @@
 {
   "name": "vue3-router-tab",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "type": "module",
   "files": [
     "dist",

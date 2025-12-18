@@ -98,7 +98,9 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
   } = options
 
   const controller = useRouterTabs({ optional: true })
-  const hydrating = ref(false)
+  // Start as `true` so pages won't mount until hydration decides what to do.
+  // This prevents double-mount / double-fetch on initial load when restoring tabs.
+  const hydrating = ref(true)
 
   const setup = (ctrl: NonNullable<typeof controller>, mode: 'hook' | 'immediate' = 'hook') => {
     const run = async () => {
