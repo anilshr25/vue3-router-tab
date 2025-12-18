@@ -53,7 +53,7 @@
     </header>
 
     <div class="router-tab__container">
-      <RouterView v-slot="{ Component, route }">
+      <RouterView v-if="!persistenceHydrating" v-slot="{ Component, route }">
         <template v-if="hasCustomSlot">
           <slot
             v-bind="{
@@ -89,6 +89,7 @@
           </template>
         </template>
       </RouterView>
+      <div v-else class="router-tab__hydrating" aria-hidden="true" />
     </div>
 
     <!-- Use v-show instead of v-if to keep DOM and prevent re-creation overhead -->
@@ -433,6 +434,7 @@ export default defineComponent({
       return false
     })
 
+    let persistenceHydrating = ref(false)
     if (props.cookieKey !== null || props.persistence) {
       const options: RouterTabsPersistenceOptions = {
         ...(props.persistence ?? {})
@@ -442,7 +444,8 @@ export default defineComponent({
       } else if (!options.cookieKey) {
         options.cookieKey = routerTabsCookie
       }
-      useRouterTabsPersistence(options)
+      const persistenceState = useRouterTabsPersistence(options)
+      persistenceHydrating = persistenceState.hydrating
     }
 
     const tabTransitionProps = computed(() => getTransOpt(props.tabTransition))
@@ -1143,6 +1146,7 @@ export default defineComponent({
       controller,
       tabs: controller.tabs,
       includeKeys,
+      persistenceHydrating,
       componentCache,
       componentCacheTrigger,
       cacheCurrentComponent,

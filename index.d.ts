@@ -56,7 +56,7 @@ export declare const routerTabsKey: import('vue').InjectionKey<RouterTabsContext
 
 export declare function useRouterTabs(options?: { optional?: boolean }): RouterTabsContext | null
 
-export declare function useRouterTabsPersistence(options?: RouterTabsPersistenceOptions): void
+export declare function useRouterTabsPersistence(options?: RouterTabsPersistenceOptions): { hydrating: import('vue').Ref<boolean> }
 
 export declare function initRouterTabsTheme(options?: RouterTabsThemeOptions): void
 export declare function setRouterTabsTheme(style: 'light' | 'dark' | 'system', options?: RouterTabsThemeOptions): void

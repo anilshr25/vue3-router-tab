@@ -507,7 +507,20 @@ export function createRouterTabs(
     const target = snapshot?.active ?? records[records.length - 1]?.to ?? options.defaultRoute
     if (target) {
       try {
-        await router.replace(target)
+        const resolvedTarget = resolveRoute(router, target)
+        const currentRoute = router.currentRoute.value
+
+        // Avoid redundant navigation on page reload when the router is already at the target.
+        // A duplicate replace can trigger an extra mount cycle in tabbed layouts.
+        if (resolvedTarget.fullPath === currentRoute.fullPath) {
+          const tab = ensureTab(currentRoute as RouteLocationNormalizedLoaded)
+          activeId.value = tab.id
+          current.value = tab
+          enforceMaxAlive(tabs, options.maxAlive, activeId.value, aliveCache)
+          return
+        }
+
+        await router.replace(resolvedTarget)
       } catch (error) {
         console.warn('[RouterTabs] Failed to navigate to restored route', target, error)
       }

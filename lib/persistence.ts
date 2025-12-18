@@ -1,4 +1,4 @@
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { nextTick, onBeforeMount, onMounted, ref, watch, type Ref } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 import { useRouterTabs } from './useRouterTabs'
 import type { RouterTabsSnapshot } from './core/types'
@@ -98,15 +98,16 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
   } = options
 
   const controller = useRouterTabs({ optional: true })
-  const hydrating = ref(true)
+  const hydrating = ref(false)
 
-  const setup = (ctrl: NonNullable<typeof controller>) => {
-    onMounted(async () => {
-      const initialSnapshot = deserialize(readCookie(cookieKey))
+  const setup = (ctrl: NonNullable<typeof controller>, mode: 'hook' | 'immediate' = 'hook') => {
+    const run = async () => {
+      hydrating.value = true
 
-      if (initialSnapshot && initialSnapshot.tabs?.length) {
-        try {
-          hydrating.value = true
+      try {
+        const initialSnapshot = deserialize(readCookie(cookieKey))
+
+        if (initialSnapshot && initialSnapshot.tabs?.length) {
           await ctrl.hydrate(initialSnapshot)
           if (initialSnapshot.active) {
             await nextTick()
@@ -116,30 +117,30 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
               ctrl.current.value = activeTab
             }
           }
-        } finally {
-          hydrating.value = false
-        }
-      } else if (Object.prototype.hasOwnProperty.call(options, 'fallbackRoute')) {
-        try {
-          hydrating.value = true
+        } else if (Object.prototype.hasOwnProperty.call(options, 'fallbackRoute')) {
           const fallback = options.fallbackRoute ?? ctrl.options.defaultRoute
           await ctrl.reset(fallback)
-        } finally {
-          hydrating.value = false
         }
-      } else {
+
+        const snapshot = ctrl.snapshot()
+        if (!snapshot.tabs.length) {
+          removeCookie(cookieKey, options)
+        } else {
+          writeCookie(cookieKey, serialize(snapshot), options)
+        }
+      } finally {
         hydrating.value = false
       }
+    }
 
-      const snapshot = ctrl.snapshot()
-      if (!snapshot.tabs.length) {
-        removeCookie(cookieKey, options)
-      } else {
-        writeCookie(cookieKey, serialize(snapshot), options)
-      }
-
-      hydrating.value = false
-    })
+    if (mode === 'immediate') {
+      void run()
+    } else {
+      // Run before the first paint to avoid mounting pages twice during a restore.
+      onBeforeMount(() => {
+        void run()
+      })
+    }
 
     watch(
       () => ({
@@ -173,12 +174,14 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
     onMounted(() => {
       const lateController = useRouterTabs({ optional: true })
       if (lateController) {
-        setup(lateController)
+        setup(lateController, 'immediate')
       } else if (import.meta.env?.DEV) {
         console.warn('[RouterTabs] Persistence helper must be used inside <router-tab>.')
       }
     })
   }
+
+  return { hydrating: hydrating as Ref<boolean> }
 }
 
 export default useRouterTabsPersistence
