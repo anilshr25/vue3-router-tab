@@ -866,25 +866,11 @@ export default defineComponent({
       const tab = controller.tabs.find(item => item.id === routeKey)
       
       if (!tab) {
-        console.warn('[RouterTab] Tab not found for route:', routeKey)
         return `${routeKey}::0`
       }
       
       const renderKey = tab.renderKey ?? 0
       const cacheKey = `${routeKey}::${renderKey}`
-      
-      // Debug logging for specific routes
-      if (routeKey.includes('students') || routeKey.includes('classroom') || routeKey.includes('quiz')) {
-        console.log(`[getComponentCacheKey] Route: ${route.fullPath}`, {
-          routeKey,
-          renderKey,
-          cacheKey,
-          tabAlive: tab.alive,
-          includeKeys: includeKeys.value,
-          isIncluded: includeKeys.value.includes(cacheKey)
-        })
-      }
-      
       return cacheKey
     }
 
@@ -1087,7 +1073,6 @@ export default defineComponent({
         
         instanceKeys.forEach(key => {
           if (!currentTabIds.has(key)) {
-            console.log(`[RouterTab] Cleaning up stale component instance: ${key}`)
             cleanupComponentWatching(key)
           }
         })
