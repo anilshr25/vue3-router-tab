@@ -1,8 +1,6 @@
 <template>
   <AppLayout
     :menu-items="menuItems"
-    @logout="handleLogout"
-    @footer-link="handleFooterLink"
   >
     <!-- Custom Logo -->
     <template #sidebar-logo>
@@ -54,7 +52,7 @@
             <v-list-item-title>Settings</v-list-item-title>
           </v-list-item>
           <v-divider />
-          <v-list-item @click="handleLogout">
+          <v-list-item>
             <template #prepend>
               <v-icon color="error">mdi-logout</v-icon>
             </template>

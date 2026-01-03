@@ -125,7 +125,7 @@ const routes = [
         name: 'TitleTest',
         component: () => import('./views/TitleTestDemo.vue'),
         meta: {
-          title: 'Title Test',
+          title: 'Your Custom Title',
           icon: 'mdi-format-title',
           keepAlive: true,
         },

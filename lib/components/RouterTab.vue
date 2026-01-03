@@ -785,7 +785,29 @@ export default defineComponent({
       return defineComponent({
         name,
         setup(_, { attrs, slots }) {
-          return () => h(component, attrs, slots)
+          const innerRef = ref<any>()
+
+          // Forward tab props to the wrapper proxy so handleComponentRef can see them
+          const instance = getCurrentInstance()
+          if (instance?.proxy) {
+            const proxy = instance.proxy as any
+            const forwardProps: Record<string, () => any> = {
+              routeTabTitle: () => innerRef.value?.routeTabTitle,
+              routeTabIcon: () => innerRef.value?.routeTabIcon,
+              routeTabClosable: () => innerRef.value?.routeTabClosable,
+              routeTabMeta: () => innerRef.value?.routeTabMeta,
+              $: () => innerRef.value
+            }
+
+            Object.entries(forwardProps).forEach(([key, getter]) => {
+              Object.defineProperty(proxy, key, {
+                get: getter,
+                configurable: true
+              })
+            })
+          }
+
+          return () => h(component, { ...attrs, ref: innerRef }, slots)
         }
       })
     }

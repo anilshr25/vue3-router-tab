@@ -871,7 +871,7 @@ const {
 } = useReactiveTab({
   title: () => `${user.value.name} - ${user.value.status}`,
   icon: () => user.value.status === 'online' ? 'mdi-account' : 'mdi-account-off',
-  closable: () => user.value.status !== 'editing'
+ closable: () => user.value.status !== 'editing'
 })
 </script>
 ```
@@ -882,6 +882,23 @@ const {
 2. **Reactive types**: Use `ref()` or `computed()` - plain values won't trigger updates
 3. **Automatic watching**: No manual watchers needed - the plugin handles everything
 4. **Performance**: Only active tab components are watched to minimize overhead
+
+#### Works inside KeepAlive and wrappers
+
+`<router-tab>` forwards the tab bindings even when your pages are wrapped for caching. Just expose reactive values (refs/computed) and they will still be watched:
+
+```vue
+<script setup>
+import { computed, ref } from 'vue'
+
+const count = ref(3)
+const isLoading = ref(false)
+
+const routeTabTitle = computed(() => isLoading.value ? 'Loading orders…' : `Orders (${count.value})`)
+const routeTabIcon = computed(() => isLoading.value ? 'mdi-loading mdi-spin' : 'mdi-cart')
+const routeTabClosable = computed(() => !isLoading.value)
+</script>
+```
 
 > 💡 **Try it yourself**: Check out the live demo at `/title-test` in the example app to see all these features in action!
 

@@ -115,7 +115,7 @@
               <v-list-item-title>Settings</v-list-item-title>
             </v-list-item>
             <v-divider />
-            <v-list-item @click="handleLogout">
+            <v-list-item>
               <template #prepend>
                 <v-icon>mdi-logout</v-icon>
               </template>
