@@ -7,7 +7,7 @@
 import { onMounted, watch } from "vue";
 import { setRouterTabsTheme, setRouterTabsPrimary } from "vue3-router-tab";
 import { useTheme } from "vuetify";
-import { ColorStyle } from "../../lib/theme";
+import type { ColorStyle } from "../../lib/theme";
 
 
 const defaultColors: ColorStyle = {

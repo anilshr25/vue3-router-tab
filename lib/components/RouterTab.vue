@@ -1,6 +1,6 @@
 <template>
   <div class="router-tab">
-    <header class="router-tab__header">
+    <header class="router-tab__header" :class="{ 'is-not-sticky': !stickyHeader }">
       <div
         class="router-tab__slot-start"
         :class="{ 'has-content': hasStartSlot }"
@@ -179,7 +179,7 @@ const RouterTab = defineComponent({
       type: Boolean,
       default: true
     },
-    stickyTabs: {
+    stickyHeader: {
       type: Boolean,
       default: true
     },
@@ -199,7 +199,7 @@ const RouterTab = defineComponent({
       type: [String, Object] as PropType<TransitionLike>,
       default: () => ({ name: 'router-tab-swap', mode: 'out-in' })
     },
-    contextmenu: {
+    contextMenu: {
       type: [Boolean, Array] as PropType<boolean | RouterTabsMenuConfig[]>,
       default: true
     },
@@ -233,7 +233,6 @@ const RouterTab = defineComponent({
       keepAlive: props.keepAlive,
       maxAlive: props.maxAlive,
       keepLastTab: props.keepLastTab,
-      stickyTabs: props.stickyTabs,
       appendPosition: props.append,
       defaultRoute: props.defaultPage,
     })
@@ -356,33 +355,6 @@ const RouterTab = defineComponent({
           }
         }
 
-        // Watch routeTabSticky for sticky state updates
-        if (controller.options.stickyTabs && componentInstance.routeTabSticky !== undefined) {
-          try {
-            const unwatchSticky = watch(
-              () => {
-                const stickyValue = componentInstance.routeTabSticky
-                return stickyValue && typeof stickyValue === 'object' && 'value' in stickyValue ? stickyValue.value : stickyValue
-              },
-              (newSticky) => {
-                if (newSticky !== undefined && newSticky !== null) {
-                  tab.sticky = Boolean(newSticky)
-                  if (tab.sticky) {
-                    tab.closable = false
-                  } else if (componentInstance.routeTabClosable === undefined) {
-                    tab.closable = tab.matched.meta?.closable === false ? false : true
-                  }
-                  triggerTabUpdate()
-                }
-              },
-              { immediate: true }
-            )
-            unwatchers.push(unwatchSticky)
-          } catch (error) {
-            console.error(`[RouterTab] Error watching routeTabSticky for ${routeKey}:`, error)
-          }
-        }
-        
         // Watch routeTabMeta for general meta updates
         if (componentInstance.routeTabMeta !== undefined) {
           try {
@@ -439,9 +411,9 @@ const RouterTab = defineComponent({
         if (el) {
           // Component mounted - set up watching
           // Check if properties are exposed directly on el (Vue 3 with defineExpose)
-          if (el.routeTabTitle !== undefined || el.routeTabIcon !== undefined || el.routeTabClosable !== undefined || el.routeTabSticky !== undefined) {
+          if (el.routeTabTitle !== undefined || el.routeTabIcon !== undefined || el.routeTabClosable !== undefined) {
             setupComponentWatching(routeKey, el)
-          } else if (el.$ && (el.$.routeTabTitle !== undefined || el.$.routeTabIcon !== undefined || el.$.routeTabClosable !== undefined || el.$.routeTabSticky !== undefined)) {
+          } else if (el.$ && (el.$.routeTabTitle !== undefined || el.$.routeTabIcon !== undefined || el.$.routeTabClosable !== undefined)) {
             setupComponentWatching(routeKey, el.$)
           }
         } else if (el === null) {
@@ -543,7 +515,7 @@ const RouterTab = defineComponent({
     }
 
     async function closeTabsGroup(tabsToClose: TabRecord[], reference: TabRecord) {
-      const closable = tabsToClose.filter(item => item.closable !== false && (!controller.options.stickyTabs || item.sticky !== true))
+      const closable = tabsToClose.filter(item => item.closable !== false)
       if (!closable.length) return
 
       for (const tab of closable) {
@@ -584,21 +556,21 @@ const RouterTab = defineComponent({
         handler: async ({ target }) => {
           await closeTabsGroup(getLeftTabs(target), target)
         },
-        enable: ({ target }) => getLeftTabs(target).some(tab => tab.closable !== false && (!controller.options.stickyTabs || tab.sticky !== true))
+        enable: ({ target }) => getLeftTabs(target).some(tab => tab.closable !== false)
       },
       closeRights: {
         label: 'Close to the Right',
         handler: async ({ target }) => {
           await closeTabsGroup(getRightTabs(target), target)
         },
-        enable: ({ target }) => getRightTabs(target).some(tab => tab.closable !== false && (!controller.options.stickyTabs || tab.sticky !== true))
+        enable: ({ target }) => getRightTabs(target).some(tab => tab.closable !== false)
       },
       closeOthers: {
         label: 'Close Others',
         handler: async ({ target }) => {
           await closeTabsGroup(getOtherTabs(target), target)
         },
-        enable: ({ target }) => getOtherTabs(target).some(tab => tab.closable !== false && (!controller.options.stickyTabs || tab.sticky !== true))
+        enable: ({ target }) => getOtherTabs(target).some(tab => tab.closable !== false)
       }
     }
 
@@ -610,7 +582,7 @@ const RouterTab = defineComponent({
     }
 
     function showContextMenu(tab: TabRecord, event: MouseEvent) {
-      if (!props.contextmenu) return
+      if (!props.contextMenu) return
       
       // Batch updates to prevent multiple reactive triggers
       context.target = tab
@@ -657,9 +629,9 @@ const RouterTab = defineComponent({
 
     const menuItems = computed<ResolvedMenuItem[]>(() => {
       // Early return to prevent computation when menu is hidden
-      if (!context.visible || !context.target || props.contextmenu === false) return []
+      if (!context.visible || !context.target || props.contextMenu === false) return []
       
-      const source = Array.isArray(props.contextmenu) ? props.contextmenu : defaultMenuOrder
+      const source = Array.isArray(props.contextMenu) ? props.contextMenu : defaultMenuOrder
       const ctx: MenuActionContext = { target: context.target, controller }
       
       // Map and filter in one pass for better performance
@@ -827,9 +799,7 @@ const RouterTab = defineComponent({
               routeTabTitle: () => innerRef.value?.routeTabTitle,
               routeTabIcon: () => innerRef.value?.routeTabIcon,
               routeTabClosable: () => innerRef.value?.routeTabClosable,
-              routeTabSticky: () => innerRef.value?.routeTabSticky,
               routeTabMeta: () => innerRef.value?.routeTabMeta,
-              updateSticky: () => innerRef.value?.updateSticky,
               $: () => innerRef.value
             }
 
@@ -947,7 +917,6 @@ const RouterTab = defineComponent({
     }
 
     function isClosable(tab: TabRecord) {
-      if (controller.options.stickyTabs && tab.sticky) return false
       if (tab.closable === false) return false
       if (controller.options.keepLastTab && controller.tabs.length <= 1) return false
       return true
@@ -1013,7 +982,6 @@ const RouterTab = defineComponent({
         {
           'is-active': controller.activeId.value === tab.id,
           'is-closable': isClosable(tab),
-          'is-sticky': controller.options.stickyTabs && tab.sticky,
           'is-dragging': dragState.dragging && dragState.dragTab?.id === tab.id,
           'is-drag-over': dragState.dropIndex === getTabIndex(tab.id)
         },
@@ -1163,12 +1131,9 @@ const RouterTab = defineComponent({
       }
     )
 
-    watch(
-      () => props.contextmenu,
-      value => {
-        if (!value) hideContextMenu()
-      }
-    )
+    watch(() => props.contextMenu, value => {
+      if (!value) hideContextMenu()
+    })
 
     watch(
       () => menuItems.value.length,

@@ -54,7 +54,8 @@
   color: var(--router-tab-text);
 
   &__header {
-    position: relative;
+    position: sticky;
+    top: 0;
     z-index: 10;
     display: flex;
     flex: none;
@@ -64,6 +65,11 @@
     background-color: var(--router-tab-header-bg);
     border-bottom: 1px solid var(--router-tab-border);
     transition: $router-tab-transition-fast;
+
+    &.is-not-sticky {
+      position: relative;
+      top: auto;
+    }
   }
 
   &__scroll {

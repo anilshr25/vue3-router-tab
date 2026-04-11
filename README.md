@@ -14,7 +14,6 @@ A powerful, feature-rich Vue 3 tab-bar plugin that keeps multiple routes alive w
 - 🖱️ **Context Menu** - Right-click tabs for refresh, close, and navigation options
 - 🔀 **Drag & Drop** - Reorder tabs with drag-and-drop (sortable)
 - 💾 **Cookie Persistence** - Restore tabs on page refresh with customizable options
-- 📌 **Sticky Routes** - Pin selected routes so they stay open and non-closable
 - 🎭 **Theme Support** - Light, dark, and system themes with customizable colors
 - ⚡ **KeepAlive Support** - Preserve component state when switching tabs with smart cache management
 - ♿ **Accessibility** - Full WCAG compliance with ARIA labels, keyboard navigation, and screen reader support
@@ -72,32 +71,6 @@ That's it! You now have a fully functional tabbed router interface.
 </template>
 ```
 
-### Sticky Tabs
-
-Mark routes as sticky when you want them to stay pinned and non-closable:
-
-```vue
-<template>
-  <router-tab
-    :sticky-tabs="true"
-    :keep-alive="true"
-  />
-</template>
-```
-
-```ts
-{
-  path: '/dashboard',
-  component: Dashboard,
-  meta: {
-    title: 'Dashboard',
-    sticky: true,
-  },
-}
-```
-
-Set `:sticky-tabs="false"` to ignore sticky route metadata globally.
-
 ## 📖 Usage Guide
 
 ### Basic Configuration
@@ -129,7 +102,6 @@ const routes = [
     meta: {
       title: 'Home',
       icon: 'mdi-home',
-      sticky: true,
       keepAlive: true,
     },
   },
@@ -387,7 +359,7 @@ interface RouterTabsContext {
 
 ```vue
 <router-tab
-  :contextmenu="[
+  :contextMenu="[
     'refresh',
     'close',
     { id: 'duplicate', label: 'Duplicate Tab', handler: ({ target }) => openTab(target.to) },
@@ -1084,7 +1056,7 @@ Fine-grained control over tab persistence:
 
 ```vue
 <router-tab
-  :contextmenu="[
+  :contextMenu="[
     'refresh',
     'close',
     { id: 'closeOthers', label: 'Close All Others' },

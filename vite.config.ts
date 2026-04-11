@@ -18,6 +18,17 @@ export default defineConfig({
     },
     rollupOptions: {
       external: ['vue', 'vue-router'],
+      onwarn(warning, warn) {
+        if (
+          warning.code === 'UNUSED_EXTERNAL_IMPORT' &&
+          warning.message.includes('"guardReactiveProps"') &&
+          warning.message.includes('external module "vue"')
+        ) {
+          return
+        }
+
+        warn(warning)
+      },
       output: {
         exports: 'named',
         globals: {

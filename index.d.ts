@@ -28,12 +28,12 @@ export interface RouterTabProps {
   keepAlive?: boolean
   maxAlive?: number
   keepLastTab?: boolean
-  stickyTabs?: boolean
+  stickyHeader?: boolean
   append?: 'last' | 'next'
   defaultPage?: RouteLocationRaw
   tabTransition?: TransitionLike
   pageTransition?: TransitionLike
-  contextmenu?: boolean | RouterTabsMenuConfig[]
+  contextMenu?: boolean | RouterTabsMenuConfig[]
   cookieKey?: string | null
   persistence?: RouterTabsPersistenceOptions | null
   sortable?: boolean
@@ -43,7 +43,6 @@ export interface ReactiveTabState {
   title?: string | Ref<string> | ComputedRef<string>
   icon?: string | Ref<string> | ComputedRef<string>
   closable?: boolean | Ref<boolean> | ComputedRef<boolean>
-  sticky?: boolean | Ref<boolean> | ComputedRef<boolean>
   meta?: Record<string, unknown> | Ref<Record<string, unknown>> | ComputedRef<Record<string, unknown>>
 }
 
@@ -51,12 +50,10 @@ export interface ReactiveTabReturn {
   routeTabTitle: Ref<string> | ComputedRef<string>
   routeTabIcon: Ref<string> | ComputedRef<string>
   routeTabClosable: Ref<boolean> | ComputedRef<boolean>
-  routeTabSticky: Ref<boolean> | ComputedRef<boolean>
   routeTabMeta: Ref<Record<string, unknown>> | ComputedRef<Record<string, unknown>>
   updateTitle: (title: string) => void
   updateIcon: (icon: string) => void
   updateClosable: (closable: boolean) => void
-  updateSticky: (sticky: boolean) => void
   updateMeta: (meta: Record<string, unknown>) => void
 }
 
@@ -102,7 +99,7 @@ export declare function useStatusTab(
 export declare const RouterTabs: DefineComponent<RouterTabsPersistenceOptions>
 export declare const RouterTab: DefineComponent<RouterTabProps>
 
-export interface RouterTabPlugin extends Plugin {
+export type RouterTabPlugin = Plugin & {
   install: (app: App, options?: RouterTabsPluginOptions) => void
 }
 
