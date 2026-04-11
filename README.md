@@ -6,6 +6,11 @@
 
 A powerful, feature-rich Vue 3 tab-bar plugin that keeps multiple routes alive with smooth transitions, context menus, drag-and-drop reordering, and optional cookie-based persistence. Built for modern Vue 3 applications with full TypeScript support.
 
+## ⚠️ Breaking Change
+
+The legacy `contextmenu` prop alias has been removed.
+Use `contextMenu` instead.
+
 ## ✨ Key Features
 
 - 🎯 **Multi-tab Navigation** - Keep multiple routes alive simultaneously with intelligent caching
@@ -278,7 +283,7 @@ Vue3 Router Tab is fully accessible with:
 | `defaultPage` | `RouteLocationRaw` | `'/'` | Default route |
 | `tabTransition` | `TransitionLike` | `'router-tab-zoom'` | Tab list transitions |
 | `pageTransition` | `TransitionLike` | `{ name: 'router-tab-swap', mode: 'out-in' }` | Page transitions |
-| `contextmenu` | `boolean \| RouterTabsMenuConfig[]` | `true` | Context menu configuration |
+| `contextMenu` | `boolean \| RouterTabsMenuConfig[]` | `true` | Context menu configuration |
 | `cookieKey` | `string` | `'router-tabs:snapshot'` | Persistence cookie key |
 | `persistence` | `RouterTabsPersistenceOptions \| null` | `null` | Advanced persistence options |
 | `sortable` | `boolean` | `true` | Enable drag-and-drop sorting |
@@ -557,6 +562,22 @@ import RouterTab from 'vue3-router-tab'
 
 The API is backward compatible. New features are additive.
 
+### Context Menu Prop Update
+
+The legacy `contextmenu` prop alias has been removed.
+
+Use:
+
+```vue
+<router-tab :contextMenu="true" />
+```
+
+Instead of:
+
+```vue
+<router-tab :contextmenu="true" />
+```
+
 ## 📱 Browser Support
 
 - **Chrome**: 90+
@@ -606,7 +627,7 @@ Built with ❤️ by the Vue.js community. Special thanks to all contributors an
 | `defaultPage` | `string \| object` | `'/'` | Default route to navigate to |
 | `tabTransition` | `string \| object` | `'router-tab-zoom'` | Transition for tab changes |
 | `pageTransition` | `string \| object` | `{ name: 'router-tab-swap', mode: 'out-in' }` | Transition for page changes |
-| `contextmenu` | `boolean \| array` | `true` | Enable context menu or provide custom menu items |
+| `contextMenu` | `boolean \| array` | `true` | Enable context menu or provide custom menu items |
 | `cookieKey` | `string` | `'router-tabs:snapshot'` | Cookie key for persistence |
 | `persistence` | `object \| null` | `null` | Persistence configuration |
 | `sortable` | `boolean` | `true` | Enable drag-and-drop tab sorting |
