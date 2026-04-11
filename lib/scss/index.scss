@@ -10,6 +10,8 @@
   
   // Layout variables
   --router-tab-header-height: #{$router-tab-header-height};
+  --router-tab-sticky-top: 0px;
+  --router-tab-header-z-index: 10;
   --router-tab-padding: #{$router-tab-padding};
   --router-tab-font-size: #{$router-tab-font-size};
   --router-tab-transition: #{$router-tab-transition};
@@ -55,8 +57,8 @@
 
   &__header {
     position: sticky;
-    top: 0;
-    z-index: 10;
+    top: var(--router-tab-sticky-top);
+    z-index: var(--router-tab-header-z-index);
     display: flex;
     flex: none;
     align-items: center;

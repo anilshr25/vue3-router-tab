@@ -1247,6 +1247,8 @@ The package ships with its own CSS bundle (imported automatically). Override CSS
 :root {
   /* Layout */
   --router-tab-header-height: 48px;
+  --router-tab-sticky-top: 0px;
+  --router-tab-header-z-index: 10;
   --router-tab-padding: 16px;
   --router-tab-font-size: 14px;
   
@@ -1262,6 +1264,18 @@ The package ships with its own CSS bundle (imported automatically). Override CSS
   --router-tab-icon-color: #64748b;
   --router-tab-button-background: #f1f5f9;
   --router-tab-button-color: #0f172a;
+}
+```
+
+When `router-tab` is rendered below a fixed app header, set `--router-tab-sticky-top` so the sticky bar locks beneath that header instead of sliding under it:
+
+```vue
+<router-tab class="app-router-tab" />
+```
+
+```css
+.app-router-tab {
+  --router-tab-sticky-top: var(--v-layout-top, 0px);
 }
 ```
 

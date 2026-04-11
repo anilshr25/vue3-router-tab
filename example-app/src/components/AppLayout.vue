@@ -152,6 +152,7 @@
 
         <slot name="content">
           <router-tab 
+            class="app-router-tab"
             cookie-key="example-app-tabs"
             :page-transition="{ name: selectedTransition, mode: 'out-in' }"
           />
@@ -273,6 +274,10 @@ const handleFooterLink = (link: string) => {
 
 .cursor-pointer {
   cursor: pointer;
+}
+
+.app-router-tab {
+  --router-tab-sticky-top: var(--v-layout-top, 0px);
 }
 
 .fade-enter-active,
