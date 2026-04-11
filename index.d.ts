@@ -1,123 +1,108 @@
-import type { App, Plugin, DefineComponent, PropType } from 'vue'
-import type { RouteLocationRaw } from 'vue-router'
+import type { App, DefineComponent, Plugin, Ref, ComputedRef } from 'vue'
+import type { RouteLocationNormalizedLoaded, RouteLocationRaw } from 'vue-router'
 import type {
-  TabRecord,
-  TabInput,
-  RouterTabsOptions,
   CloseTabOptions,
   RouterTabsContext,
   RouterTabsMenuConfig,
   RouterTabsMenuItem,
   RouterTabsMenuPreset,
+  RouterTabsOptions,
+  RouterTabsPersistenceOptions,
   RouterTabsSnapshot,
   RouterTabsSnapshotTab,
-  RouterTabsPersistenceOptions
+  TabInput,
+  TabRecord,
+  TransitionLike
 } from './lib/core/types'
 import type { ColorStyle, RouterTabsThemeOptions } from './lib/theme'
 
 export interface RouterTabsPluginOptions {
-  /**
-   * Whether to initialise the theme system automatically during install.
-   * Defaults to `true`.
-   */
   initTheme?: boolean
-  /**
-   * Theme options passed to `initRouterTabsTheme` when `initTheme` is enabled.
-   */
   themeOptions?: RouterTabsThemeOptions
-  /**
-   * Global component name used when registering `RouterTab`.
-   * Defaults to the component's `name` option or `"RouterTab"`.
-   */
   componentName?: string
-  /**
-   * Global component name used when registering `RouterTabs`.
-   * Defaults to the component's `name` option or `"RouterTabs"`.
-   */
   tabsComponentName?: string
 }
 
+export interface RouterTabProps {
+  tabs?: TabInput[]
+  keepAlive?: boolean
+  maxAlive?: number
+  keepLastTab?: boolean
+  stickyTabs?: boolean
+  append?: 'last' | 'next'
+  defaultPage?: RouteLocationRaw
+  tabTransition?: TransitionLike
+  pageTransition?: TransitionLike
+  contextmenu?: boolean | RouterTabsMenuConfig[]
+  cookieKey?: string | null
+  persistence?: RouterTabsPersistenceOptions | null
+  sortable?: boolean
+}
+
+export interface ReactiveTabState {
+  title?: string | Ref<string> | ComputedRef<string>
+  icon?: string | Ref<string> | ComputedRef<string>
+  closable?: boolean | Ref<boolean> | ComputedRef<boolean>
+  sticky?: boolean | Ref<boolean> | ComputedRef<boolean>
+  meta?: Record<string, unknown> | Ref<Record<string, unknown>> | ComputedRef<Record<string, unknown>>
+}
+
+export interface ReactiveTabReturn {
+  routeTabTitle: Ref<string> | ComputedRef<string>
+  routeTabIcon: Ref<string> | ComputedRef<string>
+  routeTabClosable: Ref<boolean> | ComputedRef<boolean>
+  routeTabSticky: Ref<boolean> | ComputedRef<boolean>
+  routeTabMeta: Ref<Record<string, unknown>> | ComputedRef<Record<string, unknown>>
+  updateTitle: (title: string) => void
+  updateIcon: (icon: string) => void
+  updateClosable: (closable: boolean) => void
+  updateSticky: (sticky: boolean) => void
+  updateMeta: (meta: Record<string, unknown>) => void
+}
+
 export type {
-  TabRecord,
-  TabInput,
-  RouterTabsOptions,
   CloseTabOptions,
   RouterTabsContext,
   RouterTabsMenuConfig,
   RouterTabsMenuItem,
   RouterTabsMenuPreset,
+  RouterTabsOptions,
+  RouterTabsPersistenceOptions,
   RouterTabsSnapshot,
   RouterTabsSnapshotTab,
-  RouterTabsPersistenceOptions,
-  RouterTabsThemeOptions
+  RouterTabsThemeOptions,
+  TabInput,
+  TabRecord,
+  TransitionLike
 }
 
 export declare const routerTabsKey: import('vue').InjectionKey<RouterTabsContext>
 
 export declare function useRouterTabs(options?: { optional?: boolean }): RouterTabsContext | null
-
-export declare function useRouterTabsPersistence(options?: RouterTabsPersistenceOptions): { hydrating: import('vue').Ref<boolean> }
+export declare function useRouterTabsPersistence(options?: RouterTabsPersistenceOptions): {
+  hydrating: Ref<boolean>
+}
 
 export declare function initRouterTabsTheme(options?: RouterTabsThemeOptions): void
 export declare function setRouterTabsTheme(style: 'light' | 'dark' | 'system', options?: RouterTabsThemeOptions): void
 export declare function setRouterTabsPrimary(color: ColorStyle, options?: RouterTabsThemeOptions): void
 
-export declare const RouterTabs: DefineComponent<RouterTabsPersistenceOptions, {}, {}, {}, {}, import('vue').ComponentOptionsMixin, import('vue').ComponentOptionsMixin, {}, string, import('vue').VNodeProps & import('vue').AllowedComponentProps & import('vue').ComponentCustomProps, Readonly<RouterTabsPersistenceOptions>, {}>
+export declare function useReactiveTab(initialState?: ReactiveTabState): ReactiveTabReturn
+export declare function useLoadingTab(loadingState: Ref<boolean>, baseTitle?: string): ReactiveTabReturn
+export declare function useNotificationTab(
+  count: Ref<number>,
+  baseTitle?: string,
+  baseIcon?: string
+): ReactiveTabReturn
+export declare function useStatusTab(
+  status: Ref<'normal' | 'loading' | 'error' | 'success'>,
+  baseTitle?: string
+): ReactiveTabReturn
 
-export declare const RouterTab: DefineComponent<{
-  tabs: {
-    type: PropType<TabInput[]>
-    default: () => TabInput[]
-  }
-  keepAlive: BooleanConstructor
-  maxAlive: NumberConstructor
-  keepLastTab: BooleanConstructor
-  append: PropType<'last' | 'next'>
-  defaultPage: PropType<RouteLocationRaw>
-  tabTransition: PropType<import('./lib/core/types').TransitionLike>
-  pageTransition: PropType<import('./lib/core/types').TransitionLike>
-  contextmenu: PropType<boolean | RouterTabsMenuConfig[]>
-  cookieKey: StringConstructor
-  persistence: PropType<RouterTabsPersistenceOptions | null>
-}, {}, {}, {}, {}, import('vue').ComponentOptionsMixin, import('vue').ComponentOptionsMixin, Record<string, any>, string, import('vue').VNodeProps & import('vue').AllowedComponentProps & import('vue').ComponentCustomProps, Readonly<{
-  tabs?: TabInput[] | undefined
-  keepAlive?: boolean | undefined
-  maxAlive?: number | undefined
-  keepLastTab?: boolean | undefined
-  append?: 'last' | 'next' | undefined
-  defaultPage?: RouteLocationRaw | undefined
-  tabTransition?: import('./lib/core/types').TransitionLike | undefined
-  pageTransition?: import('./lib/core/types').TransitionLike | undefined
-  contextmenu?: boolean | RouterTabsMenuConfig[] | undefined
-  cookieKey?: string | undefined
-  persistence?: RouterTabsPersistenceOptions | null | undefined
-}> & {
-  tabs?: TabInput[] | undefined
-  keepAlive?: boolean | undefined
-  maxAlive?: number | undefined
-  keepLastTab?: boolean | undefined
-  append?: 'last' | 'next' | undefined
-  defaultPage?: RouteLocationRaw | undefined
-  tabTransition?: import('./lib/core/types').TransitionLike | undefined
-  pageTransition?: import('./lib/core/types').TransitionLike | undefined
-  contextmenu?: boolean | RouterTabsMenuConfig[] | undefined
-  cookieKey?: string | undefined
-  persistence?: RouterTabsPersistenceOptions | null | undefined
-}, {
-  tabs: TabInput[]
-  keepAlive: boolean
-  maxAlive: number
-  keepLastTab: boolean
-  append: 'last' | 'next'
-  defaultPage: RouteLocationRaw
-  tabTransition: import('./lib/core/types').TransitionLike
-  pageTransition: import('./lib/core/types').TransitionLike
-  contextmenu: boolean | RouterTabsMenuConfig[]
-  cookieKey: string
-  persistence: RouterTabsPersistenceOptions | null
-}>
+export declare const RouterTabs: DefineComponent<RouterTabsPersistenceOptions>
+export declare const RouterTab: DefineComponent<RouterTabProps>
 
-export interface RouterTabPlugin {
+export interface RouterTabPlugin extends Plugin {
   install: (app: App, options?: RouterTabsPluginOptions) => void
 }
 

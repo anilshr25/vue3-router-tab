@@ -15,6 +15,7 @@ export interface TabMeta {
   tips?: string | [string, ...unknown[]]
   icon?: string
   closable?: boolean
+  sticky?: boolean
   tabClass?: string | string[] | Record<string, boolean>
   target?: string
   href?: string
@@ -66,6 +67,7 @@ export interface RouterTabsSnapshotTab {
   icon?: TabRecord['icon']
   tabClass?: TabRecord['tabClass']
   closable?: boolean
+  sticky?: boolean
   renderKey?: number
 }
 
@@ -85,6 +87,7 @@ export interface RouterTabsOptions {
   keepAlive?: boolean
   maxAlive?: number
   keepLastTab?: boolean
+  stickyTabs?: boolean
   appendPosition?: 'last' | 'next'
   defaultRoute?: RouteLocationRaw
 }

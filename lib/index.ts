@@ -70,12 +70,18 @@ export type {
 
 import './scss/index.scss'
 
-let installed = false
+const installedApps = new WeakSet<App>()
+const routerTabsGlobalStateKey = Symbol('RouterTabsGlobalState')
+
+type RouterTabsGlobals = App['config']['globalProperties'] & {
+  [routerTabsGlobalStateKey]?: RouterTabsContext | null
+  $tabs?: RouterTabsContext | null
+}
 
 const plugin: Plugin = {
   install(app: App, options?: RouterTabsPluginOptions) {
-    if (installed) return
-    installed = true
+    if (installedApps.has(app)) return
+    installedApps.add(app)
 
     const {
       initTheme = true,
@@ -95,14 +101,17 @@ const plugin: Plugin = {
       app.component('router-tabs', RouterTabsComponent)
     }
 
-    Object.defineProperty(app.config.globalProperties, '$tabs', {
+    const globals = app.config.globalProperties as RouterTabsGlobals
+
+    Object.defineProperty(globals, '$tabs', {
       configurable: true,
       enumerable: false,
       get() {
-        return app._context.provides[routerTabsKey as unknown as symbol] as RouterTabsContext | null
+        return globals[routerTabsGlobalStateKey] ?? null
       },
       set(value: RouterTabsContext | null) {
-        if (value) {
+        globals[routerTabsGlobalStateKey] = value ?? null
+        if (value !== null) {
           app.provide(routerTabsKey, value)
         }
       }

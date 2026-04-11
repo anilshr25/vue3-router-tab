@@ -23,6 +23,7 @@ function resolveOptions(options: RouterTabsOptions = {}): Required<RouterTabsOpt
     keepAlive: options.keepAlive ?? true,
     maxAlive: options.maxAlive ?? 0,
     keepLastTab: options.keepLastTab ?? true,
+    stickyTabs: options.stickyTabs ?? true,
     appendPosition: options.appendPosition ?? 'last',
     defaultRoute: options.defaultRoute ?? '/'
   }
@@ -33,7 +34,7 @@ function resolveRoute(router: Router, location: RouteLocationRaw): RouteLocation
   if (!resolved || !resolved.matched.length) {
     throw new Error(`[RouterTabs] Unable to resolve route: ${String(location)}`)
   }
-  return resolved
+  return resolved as RouteLocationNormalizedLoaded
 }
 
 const builtinKeyResolvers: Record<string, (route: RouteLocationNormalizedLoaded) => string> = {
@@ -69,6 +70,30 @@ function resolveReusable(route: RouteLocationNormalizedLoaded, fallback: boolean
   return typeof reuse === 'boolean' ? reuse : fallback
 }
 
+function resolveSticky(
+  route: RouteLocationNormalizedLoaded,
+  fallback: boolean,
+  override?: boolean
+): boolean {
+  if (!fallback) return false
+  const sticky = route.meta?.sticky
+  if (typeof sticky === 'boolean') return sticky
+  if (typeof override === 'boolean') return override
+  return false
+}
+
+function resolveClosable(
+  route: RouteLocationNormalizedLoaded,
+  sticky: boolean,
+  fallback?: boolean
+): boolean {
+  if (sticky) return false
+  const closable = route.meta?.closable
+  if (typeof closable === 'boolean') return closable
+  if (typeof fallback === 'boolean') return fallback
+  return true
+}
+
 function pickMeta(route: RouteLocationNormalizedLoaded): Partial<TabRecord> {
   const meta = route.meta ?? {}
   const tab: Partial<TabRecord> = {}
@@ -76,6 +101,7 @@ function pickMeta(route: RouteLocationNormalizedLoaded): Partial<TabRecord> {
   if ('tips' in meta) tab.tips = meta.tips as TabRecord['tips']
   if ('icon' in meta) tab.icon = meta.icon as TabRecord['icon']
   if ('closable' in meta) tab.closable = meta.closable as TabRecord['closable']
+  if ('sticky' in meta) tab.sticky = meta.sticky as TabRecord['sticky']
   if ('tabClass' in meta) tab.tabClass = meta.tabClass as TabRecord['tabClass']
   if ('target' in meta) tab.target = meta.target as TabRecord['target']
   if ('href' in meta) tab.href = meta.href as TabRecord['href']
@@ -85,9 +111,11 @@ function pickMeta(route: RouteLocationNormalizedLoaded): Partial<TabRecord> {
 function createTabFromRoute(
   route: RouteLocationNormalizedLoaded,
   base: Partial<TabRecord>,
-  keepAliveDefault: boolean
+  keepAliveDefault: boolean,
+  stickyTabsDefault: boolean
 ): TabRecord {
   const meta = pickMeta(route)
+  const sticky = resolveSticky(route, stickyTabsDefault, base.sticky)
   return {
     id: resolveKey(route),
     to: route.fullPath,
@@ -95,10 +123,11 @@ function createTabFromRoute(
     matched: route,
     alive: resolveAlive(route, keepAliveDefault),
     reusable: resolveReusable(route, false),
-    closable: meta.closable ?? true,
     renderKey: typeof base.renderKey === 'number' ? base.renderKey : 0,
     ...meta,
-    ...base
+    ...base,
+    sticky,
+    closable: resolveClosable(route, sticky, base.closable)
   }
 }
 
@@ -155,6 +184,7 @@ function toSnapshotTab(tab: TabRecord): RouterTabsSnapshotTab {
     icon: tab.icon,
     tabClass: tab.tabClass,
     closable: tab.closable,
+    sticky: tab.sticky,
     renderKey: tab.renderKey
   }
 }
@@ -166,10 +196,15 @@ function fromSnapshotTab(snapshot: RouterTabsSnapshotTab): Partial<TabRecord> {
   if ('icon' in snapshot) base.icon = snapshot.icon
   if ('tabClass' in snapshot) base.tabClass = snapshot.tabClass
   if ('closable' in snapshot) base.closable = snapshot.closable
+  if ('sticky' in snapshot) base.sticky = snapshot.sticky
   if ('renderKey' in snapshot && typeof snapshot.renderKey === 'number') {
     base.renderKey = snapshot.renderKey
   }
   return base
+}
+
+function getTabCacheKey(tab: Pick<TabRecord, 'id' | 'renderKey'>): string {
+  return `${tab.id}::${tab.renderKey ?? 0}`
 }
 
 export function createRouterTabs(
@@ -194,6 +229,25 @@ export function createRouterTabs(
   })
 
   let isHydrating = false
+
+  function syncAliveCache(tab: TabRecord) {
+    const cacheKey = getTabCacheKey(tab)
+
+    if (tab.alive) {
+      aliveCache.add(cacheKey)
+      return
+    }
+
+    aliveCache.delete(cacheKey)
+  }
+
+  function clearRuntimeState() {
+    aliveCache.clear()
+    refreshingKey.value = null
+    tabs.splice(0, tabs.length)
+    activeId.value = null
+    current.value = undefined
+  }
 
   function matchRoute(target: RouteLocationNormalizedLoaded | RouteLocationRaw): RouteMatchResult {
     const route =
@@ -225,14 +279,17 @@ export function createRouterTabs(
       tab.to = route.fullPath
       tab.matched = route
       tab.reusable = resolveReusable(route, tab.reusable)
-      
+      Object.assign(tab, pickMeta(route))
+      tab.sticky = resolveSticky(route, options.stickyTabs, tab.sticky)
+      tab.closable = resolveClosable(route, tab.sticky, tab.closable)
+
       // Ensure renderKey is initialized
       if (typeof tab.renderKey !== 'number') {
         tab.renderKey = 0
       }
       
       // Generate the current cache key for this tab
-      const currentCacheKey = `${key}::${tab.renderKey}`
+      const currentCacheKey = getTabCacheKey(tab)
       
       // Manage KeepAlive cache state
       if (shouldBeAlive) {
@@ -252,18 +309,14 @@ export function createRouterTabs(
         tab.alive = false
       }
       
-      Object.assign(tab, pickMeta(route))
       return tab
     }
 
     // Create new tab
-    tab = createTabFromRoute(route, {}, options.keepAlive)
+    tab = createTabFromRoute(route, {}, options.keepAlive, options.stickyTabs)
     
     // Add to cache if it should be alive
-    if (tab.alive) {
-      const cacheKey = `${key}::${tab.renderKey ?? 0}`
-      aliveCache.add(cacheKey)
-    }
+    syncAliveCache(tab)
     
     insertTab(tabs, tab, options.appendPosition, activeId.value)
     enforceMaxAlive(tabs, options.maxAlive, activeId.value, aliveCache)
@@ -299,6 +352,11 @@ export function createRouterTabs(
 
   async function closeTab(id: string | null = activeId.value, closeOptions: CloseTabOptions = {}) {
     if (!id) return
+    const tab = tabs.find(item => item.id === id)
+    if (!tab) return
+    if (!closeOptions.force && options.stickyTabs && tab.sticky) {
+      throw new Error('[RouterTabs] Unable to close a sticky tab.')
+    }
     if (!closeOptions.force && options.keepLastTab && tabs.length === 1) {
       throw new Error('[RouterTabs] Unable to close the final tab when keepLastTab is true.')
     }
@@ -307,9 +365,6 @@ export function createRouterTabs(
     const isClosingActiveTab = activeId.value === id
     const shouldRedirect = isClosingActiveTab && closeOptions.redirect !== null
     const fallbackRoute = shouldRedirect ? (closeOptions.redirect ?? fallbackAfterClose(id)) : null
-
-
-
     await removeTab(id, { force: closeOptions.force })
 
     // Only skip redirect if explicitly set to null
@@ -328,8 +383,11 @@ export function createRouterTabs(
     if (index === -1) return
 
     const tab = tabs[index]
+    if (!opts.force && options.stickyTabs && tab.sticky) {
+      throw new Error('[RouterTabs] Unable to remove a sticky tab.')
+    }
     // Remove KeepAlive cache entry if present
-    const cacheKey = `${id}::${tab.renderKey ?? 0}`
+    const cacheKey = getTabCacheKey(tab)
     aliveCache.delete(cacheKey)
     tab.alive = false
 
@@ -359,7 +417,7 @@ export function createRouterTabs(
     if (!tab) return
 
     const shouldRestoreCache = options.keepAlive && tab.alive
-    const oldCacheKey = `${id}::${tab.renderKey ?? 0}`
+    const oldCacheKey = getTabCacheKey(tab)
 
     // Step 1: Remove from KeepAlive cache to prepare for fresh mount
     if (shouldRestoreCache) {
@@ -371,7 +429,7 @@ export function createRouterTabs(
     // Step 2: Increment renderKey to generate new cache key (e.g., /quiz::0 → /quiz::1)
     // This ensures KeepAlive treats it as a completely new component instance
     tab.renderKey = (tab.renderKey ?? 0) + 1
-    const newCacheKey = `${id}::${tab.renderKey}`
+    const newCacheKey = getTabCacheKey(tab)
 
     // Step 3: Restore to KeepAlive cache with new renderKey
     if (shouldRestoreCache) {
@@ -403,7 +461,7 @@ export function createRouterTabs(
     const tab = tabs.find(t => t.id === id)
     if (!tab) return
     
-    const cacheKey = `${id}::${tab.renderKey ?? 0}`
+    const cacheKey = getTabCacheKey(tab)
     
     if (alive) {
       aliveCache.add(cacheKey)
@@ -426,7 +484,7 @@ export function createRouterTabs(
     const tab = tabs.find(t => t.id === id)
     if (!tab) return
     
-    const oldCacheKey = `${id}::${tab.renderKey ?? 0}`
+    const oldCacheKey = getTabCacheKey(tab)
     
     // Remove from cache
     aliveCache.delete(oldCacheKey)
@@ -449,14 +507,13 @@ export function createRouterTabs(
   }
 
   async function reset(route: RouteLocationRaw = options.defaultRoute) {
-    tabs.splice(0, tabs.length)
-    activeId.value = null
-    current.value = undefined
+    clearRuntimeState()
 
     for (const preset of options.initialTabs) {
       const resolved = resolveRoute(router, preset.to)
-      const tab = createTabFromRoute(resolved, preset, options.keepAlive)
+      const tab = createTabFromRoute(resolved, preset, options.keepAlive, options.stickyTabs)
       tabs.push(tab)
+      syncAliveCache(tab)
     }
 
     await router.replace(route)
@@ -485,9 +542,7 @@ export function createRouterTabs(
 
   async function hydrate(snapshot: RouterTabsSnapshot): Promise<void> {
     isHydrating = true
-    tabs.splice(0, tabs.length)
-    activeId.value = null
-    current.value = undefined
+    clearRuntimeState()
 
     const records = snapshot?.tabs ?? []
 
@@ -495,8 +550,9 @@ export function createRouterTabs(
       try {
         const route = resolveRoute(router, record.to)
         const base = fromSnapshotTab(record)
-        const tab = createTabFromRoute(route, base, options.keepAlive)
+        const tab = createTabFromRoute(route, base, options.keepAlive, options.stickyTabs)
         insertTab(tabs, tab, 'last', null)
+        syncAliveCache(tab)
       } catch (error) {
         console.warn('[RouterTabs] Failed to restore tab', record, error)
       }
@@ -542,8 +598,9 @@ export function createRouterTabs(
   if (options.initialTabs.length) {
     options.initialTabs.forEach(preset => {
       const route = resolveRoute(router, preset.to)
-      const tab = createTabFromRoute(route, preset, options.keepAlive)
+      const tab = createTabFromRoute(route, preset, options.keepAlive, options.stickyTabs)
       insertTab(tabs, tab, 'last', null)
+      syncAliveCache(tab)
     })
   }
 

@@ -159,7 +159,7 @@ interface ResolvedMenuItem {
   action: () => Promise<void>
 }
 
-export default defineComponent({
+const RouterTab = defineComponent({
   name: 'RouterTab',
   components: { RouterView },
   props: {
@@ -176,6 +176,10 @@ export default defineComponent({
       default: 0
     },
     keepLastTab: {
+      type: Boolean,
+      default: true
+    },
+    stickyTabs: {
       type: Boolean,
       default: true
     },
@@ -229,6 +233,7 @@ export default defineComponent({
       keepAlive: props.keepAlive,
       maxAlive: props.maxAlive,
       keepLastTab: props.keepLastTab,
+      stickyTabs: props.stickyTabs,
       appendPosition: props.append,
       defaultRoute: props.defaultPage,
     })
@@ -262,7 +267,7 @@ export default defineComponent({
     }
 
     // Reactive tab update system
-    const componentInstances = new Map<string, any>()
+    const componentInstances = new Map<string, unknown>()
     const watchedProperties = new Map<string, (() => void)[]>()
 
     // Watch for component instance changes and set up reactivity
@@ -350,6 +355,33 @@ export default defineComponent({
             console.error(`[RouterTab] Error watching routeTabClosable for ${routeKey}:`, error)
           }
         }
+
+        // Watch routeTabSticky for sticky state updates
+        if (controller.options.stickyTabs && componentInstance.routeTabSticky !== undefined) {
+          try {
+            const unwatchSticky = watch(
+              () => {
+                const stickyValue = componentInstance.routeTabSticky
+                return stickyValue && typeof stickyValue === 'object' && 'value' in stickyValue ? stickyValue.value : stickyValue
+              },
+              (newSticky) => {
+                if (newSticky !== undefined && newSticky !== null) {
+                  tab.sticky = Boolean(newSticky)
+                  if (tab.sticky) {
+                    tab.closable = false
+                  } else if (componentInstance.routeTabClosable === undefined) {
+                    tab.closable = tab.matched.meta?.closable === false ? false : true
+                  }
+                  triggerTabUpdate()
+                }
+              },
+              { immediate: true }
+            )
+            unwatchers.push(unwatchSticky)
+          } catch (error) {
+            console.error(`[RouterTab] Error watching routeTabSticky for ${routeKey}:`, error)
+          }
+        }
         
         // Watch routeTabMeta for general meta updates
         if (componentInstance.routeTabMeta !== undefined) {
@@ -407,9 +439,9 @@ export default defineComponent({
         if (el) {
           // Component mounted - set up watching
           // Check if properties are exposed directly on el (Vue 3 with defineExpose)
-          if (el.routeTabTitle !== undefined || el.routeTabIcon !== undefined || el.routeTabClosable !== undefined) {
+          if (el.routeTabTitle !== undefined || el.routeTabIcon !== undefined || el.routeTabClosable !== undefined || el.routeTabSticky !== undefined) {
             setupComponentWatching(routeKey, el)
-          } else if (el.$ && (el.$.routeTabTitle !== undefined || el.$.routeTabIcon !== undefined || el.$.routeTabClosable !== undefined)) {
+          } else if (el.$ && (el.$.routeTabTitle !== undefined || el.$.routeTabIcon !== undefined || el.$.routeTabClosable !== undefined || el.$.routeTabSticky !== undefined)) {
             setupComponentWatching(routeKey, el.$)
           }
         } else if (el === null) {
@@ -511,7 +543,7 @@ export default defineComponent({
     }
 
     async function closeTabsGroup(tabsToClose: TabRecord[], reference: TabRecord) {
-      const closable = tabsToClose.filter(item => item.closable !== false)
+      const closable = tabsToClose.filter(item => item.closable !== false && (!controller.options.stickyTabs || item.sticky !== true))
       if (!closable.length) return
 
       for (const tab of closable) {
@@ -552,21 +584,21 @@ export default defineComponent({
         handler: async ({ target }) => {
           await closeTabsGroup(getLeftTabs(target), target)
         },
-        enable: ({ target }) => getLeftTabs(target).some(tab => tab.closable !== false)
+        enable: ({ target }) => getLeftTabs(target).some(tab => tab.closable !== false && (!controller.options.stickyTabs || tab.sticky !== true))
       },
       closeRights: {
         label: 'Close to the Right',
         handler: async ({ target }) => {
           await closeTabsGroup(getRightTabs(target), target)
         },
-        enable: ({ target }) => getRightTabs(target).some(tab => tab.closable !== false)
+        enable: ({ target }) => getRightTabs(target).some(tab => tab.closable !== false && (!controller.options.stickyTabs || tab.sticky !== true))
       },
       closeOthers: {
         label: 'Close Others',
         handler: async ({ target }) => {
           await closeTabsGroup(getOtherTabs(target), target)
         },
-        enable: ({ target }) => getOtherTabs(target).some(tab => tab.closable !== false)
+        enable: ({ target }) => getOtherTabs(target).some(tab => tab.closable !== false && (!controller.options.stickyTabs || tab.sticky !== true))
       }
     }
 
@@ -795,7 +827,9 @@ export default defineComponent({
               routeTabTitle: () => innerRef.value?.routeTabTitle,
               routeTabIcon: () => innerRef.value?.routeTabIcon,
               routeTabClosable: () => innerRef.value?.routeTabClosable,
+              routeTabSticky: () => innerRef.value?.routeTabSticky,
               routeTabMeta: () => innerRef.value?.routeTabMeta,
+              updateSticky: () => innerRef.value?.updateSticky,
               $: () => innerRef.value
             }
 
@@ -813,8 +847,24 @@ export default defineComponent({
     }
 
     // Cache for component references from RouterView (non-reactive to avoid circular reference issues)
-    const componentCache = new Map<string, any>()
+    const componentCache = new Map<string, unknown>()
     const componentCacheTrigger = ref(0) // Trigger reactivity manually
+
+    function pruneComponentCache() {
+      const validKeys = new Set(controller.tabs.map(tab => `${tab.id}::${tab.renderKey ?? 0}`))
+      let removed = false
+
+      Array.from(componentCache.keys()).forEach(key => {
+        if (!validKeys.has(key)) {
+          componentCache.delete(key)
+          removed = true
+        }
+      })
+
+      if (removed) {
+        componentCacheTrigger.value++
+      }
+    }
 
     /**
      * Cache the current component without triggering infinite loops.
@@ -897,6 +947,7 @@ export default defineComponent({
     }
 
     function isClosable(tab: TabRecord) {
+      if (controller.options.stickyTabs && tab.sticky) return false
       if (tab.closable === false) return false
       if (controller.options.keepLastTab && controller.tabs.length <= 1) return false
       return true
@@ -962,6 +1013,7 @@ export default defineComponent({
         {
           'is-active': controller.activeId.value === tab.id,
           'is-closable': isClosable(tab),
+          'is-sticky': controller.options.stickyTabs && tab.sticky,
           'is-dragging': dragState.dragging && dragState.dragTab?.id === tab.id,
           'is-drag-over': dragState.dropIndex === getTabIndex(tab.id)
         },
@@ -1066,6 +1118,7 @@ export default defineComponent({
       })
       watchedProperties.clear()
       componentInstances.clear()
+      componentCache.clear()
     })
 
     watch(
@@ -1098,6 +1151,15 @@ export default defineComponent({
             cleanupComponentWatching(key)
           }
         })
+
+        pruneComponentCache()
+      }
+    )
+
+    watch(
+      () => controller.tabs.map(tab => `${tab.id}::${tab.renderKey ?? 0}`),
+      () => {
+        pruneComponentCache()
       }
     )
 
@@ -1189,4 +1251,6 @@ export default defineComponent({
     }
   }
 })
+
+export default RouterTab
 </script>

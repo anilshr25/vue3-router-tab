@@ -46,15 +46,6 @@
             <v-icon color="primary" class="mr-2">mdi-form-textbox</v-icon>
             Title Editor
           </v-card-title>
-          <v-card-text>
-            <v-text-field
-              v-model="customTitle"
-              label="Tab title"
-              hint="This updates routeTabTitle"
-              persistent-hint
-              clearable
-            />
-          </v-card-text>
         </v-card>
       </v-col>
 
@@ -65,10 +56,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
-const customTitle = ref('My new Tab Title')
-
-// Example: use computed so RouterTab tracks reactive updates
-const routeTabTitle = computed(() => customTitle.value)
+const routeTabTitle = ref('My new Tab Title')
 
 defineExpose({
   routeTabTitle

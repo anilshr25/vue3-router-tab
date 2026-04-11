@@ -1,7 +1,7 @@
-import { resolve } from "path"
-import { defineConfig } from "vite";
-import vue from "@vitejs/plugin-vue";
-import libCss from 'vite-plugin-libcss';
+import { resolve } from 'path'
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import libCss from 'vite-plugin-libcss'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -11,15 +11,15 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, "lib/index.ts"),
-      name: "vue3-router-tab",
+      entry: resolve(__dirname, 'lib/index.ts'),
+      name: 'vue3-router-tab',
       fileName: (format) => format === 'es' ? 'vue3-router-tab.js' : 'vue3-router-tab.umd.cjs',
       formats: ['es', 'umd']
     },
     rollupOptions: {
-      external: ["vue", "vue-router"],
+      external: ['vue', 'vue-router'],
       output: {
-        exports: 'named', 
+        exports: 'named',
         globals: {
           vue: 'Vue',
           'vue-router': 'VueRouter'

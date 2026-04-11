@@ -11,6 +11,7 @@ export interface ReactiveTabState {
   title?: string | Ref<string> | ComputedRef<string>
   icon?: string | Ref<string> | ComputedRef<string>
   closable?: boolean | Ref<boolean> | ComputedRef<boolean>
+  sticky?: boolean | Ref<boolean> | ComputedRef<boolean>
   meta?: any | Ref<any> | ComputedRef<any>
 }
 
@@ -18,10 +19,12 @@ export interface ReactiveTabReturn {
   routeTabTitle: Ref<string> | ComputedRef<string>
   routeTabIcon: Ref<string> | ComputedRef<string>
   routeTabClosable: Ref<boolean> | ComputedRef<boolean>
+  routeTabSticky: Ref<boolean> | ComputedRef<boolean>
   routeTabMeta: Ref<any> | ComputedRef<any>
   updateTitle: (title: string) => void
   updateIcon: (icon: string) => void
   updateClosable: (closable: boolean) => void
+  updateSticky: (sticky: boolean) => void
   updateMeta: (meta: any) => void
 }
 
@@ -68,16 +71,19 @@ export function useReactiveTab(initialState: ReactiveTabState = {}): ReactiveTab
   const title = resolveReactiveProp(initialState.title, 'Untitled')
   const icon = resolveReactiveProp(initialState.icon, '')
   const closable = resolveReactiveProp(initialState.closable, true)
+  const sticky = resolveReactiveProp(initialState.sticky, false)
   const meta = resolveReactiveProp(initialState.meta, {})
 
   return {
     routeTabTitle: title.value,
     routeTabIcon: icon.value,
     routeTabClosable: closable.value,
+    routeTabSticky: sticky.value,
     routeTabMeta: meta.value,
     updateTitle: title.update,
     updateIcon: icon.update,
     updateClosable: closable.update,
+    updateSticky: sticky.update,
     updateMeta: meta.update
   }
 }
