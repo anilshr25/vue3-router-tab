@@ -29,6 +29,8 @@ Use `contextMenu` instead.
 
 ## 📦 Installation
 
+Requires Vue `^3.3.0` and Vue Router `^4.2.0` or `^5.0.0`.
+
 ```bash
 npm install vue3-router-tab
 # or

@@ -1,6 +1,6 @@
 {
   "name": "vue3-router-tab",
-  "version": "1.4.5",
+  "version": "1.4.7",
   "type": "module",
   "files": [
     "dist",
@@ -69,6 +69,6 @@
   },
   "peerDependencies": {
     "vue": "^3.3.0",
-    "vue-router": "^4.2.0"
+    "vue-router": "^4.2.0 || ^5.0.0"
   }
 }

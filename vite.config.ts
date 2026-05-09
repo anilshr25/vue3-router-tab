@@ -1,4 +1,3 @@
-import { resolve } from 'path'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import libCss from 'vite-plugin-libcss'
@@ -11,7 +10,7 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, 'lib/index.ts'),
+      entry: new URL('./lib/index.ts', import.meta.url).pathname,
       name: 'vue3-router-tab',
       fileName: (format) => format === 'es' ? 'vue3-router-tab.js' : 'vue3-router-tab.umd.cjs',
       formats: ['es', 'umd']
