@@ -1,29 +1,11 @@
-import { nextTick, onBeforeMount, onMounted, ref, watch, type Ref } from 'vue'
-import type { RouteLocationRaw } from 'vue-router'
+import { nextTick, onBeforeMount, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
 import { useRouterTabs } from './useRouterTabs'
-import type { RouterTabsSnapshot } from './core/types'
+import type {
+  RouterTabsPersistenceOptions,
+  RouterTabsPersistenceStorage,
+  RouterTabsSnapshot
+} from './core/types'
 import { routerTabsCookie } from './constants'
-
-export interface RouterTabsPersistenceOptions {
-  /** Cookie key used to persist snapshots. Defaults to `router-tabs:snapshot`. */
-  cookieKey?: string
-  /** Number of days before the cookie expires. Defaults to 7 days. */
-  expiresInDays?: number
-  /** Cookie path. Defaults to `/`. */
-  path?: string
-  /** Cookie domain. */
-  domain?: string
-  /** Whether to set the `Secure` flag. */
-  secure?: boolean
-  /** SameSite value. Defaults to `Lax`. */
-  sameSite?: 'lax' | 'strict' | 'none'
-  /** Custom serializer before writing to the cookie. */
-  serialize?: (snapshot: RouterTabsSnapshot | null) => string
-  /** Custom deserializer when reading the cookie. */
-  deserialize?: (value: string | null) => RouterTabsSnapshot | null
-  /** Route to open when no snapshot exists. Defaults to RouterTab's default route. */
-  fallbackRoute?: RouteLocationRaw
-}
 
 const DAY_IN_MS = 86_400_000
 
@@ -77,6 +59,33 @@ function removeCookie(key: string, options: RouterTabsPersistenceOptions) {
   document.cookie = parts.join('; ')
 }
 
+const cookieStorage: RouterTabsPersistenceStorage = {
+  read: readCookie,
+  write: writeCookie,
+  remove: removeCookie
+}
+
+const localStorageBackend: RouterTabsPersistenceStorage = {
+  read(key) {
+    if (typeof localStorage === 'undefined') return null
+    return localStorage.getItem(key)
+  },
+  write(key, value) {
+    if (typeof localStorage === 'undefined') return
+    localStorage.setItem(key, value)
+  },
+  remove(key) {
+    if (typeof localStorage === 'undefined') return
+    localStorage.removeItem(key)
+  }
+}
+
+function resolveStorage(storage: RouterTabsPersistenceOptions['storage']): RouterTabsPersistenceStorage {
+  if (!storage || storage === 'cookie') return cookieStorage
+  if (storage === 'localStorage') return localStorageBackend
+  return storage
+}
+
 const defaultSerialize = (snapshot: RouterTabsSnapshot | null) => JSON.stringify(snapshot ?? null)
 const defaultDeserialize = (value: string | null): RouterTabsSnapshot | null => {
   if (!value) return null
@@ -93,6 +102,8 @@ const defaultDeserialize = (value: string | null): RouterTabsSnapshot | null => 
 export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions = {}) {
   const {
     cookieKey = routerTabsCookie,
+    debounceMs = 0,
+    storage: storageOption,
     serialize = defaultSerialize,
     deserialize = defaultDeserialize
   } = options
@@ -101,13 +112,43 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
   // Start as `true` so pages won't mount until hydration decides what to do.
   // This prevents double-mount / double-fetch on initial load when restoring tabs.
   const hydrating = ref(true)
+  const storage = resolveStorage(storageOption)
+  let writeTimer: ReturnType<typeof setTimeout> | null = null
+
+  function clearWriteTimer() {
+    if (writeTimer === null) return
+    clearTimeout(writeTimer)
+    writeTimer = null
+  }
 
   const setup = (ctrl: NonNullable<typeof controller>, mode: 'hook' | 'immediate' = 'hook') => {
+    const persistSnapshot = () => {
+      const snapshot = ctrl.snapshot()
+      if (!snapshot.tabs.length) {
+        storage.remove(cookieKey, options)
+      } else {
+        storage.write(cookieKey, serialize(snapshot), options)
+      }
+    }
+
+    const schedulePersistSnapshot = () => {
+      if (debounceMs <= 0) {
+        persistSnapshot()
+        return
+      }
+
+      clearWriteTimer()
+      writeTimer = setTimeout(() => {
+        writeTimer = null
+        persistSnapshot()
+      }, debounceMs)
+    }
+
     const run = async () => {
       hydrating.value = true
 
       try {
-        const initialSnapshot = deserialize(readCookie(cookieKey))
+        const initialSnapshot = deserialize(storage.read(cookieKey))
 
         if (initialSnapshot && initialSnapshot.tabs?.length) {
           await ctrl.hydrate(initialSnapshot)
@@ -124,12 +165,7 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
           await ctrl.reset(fallback)
         }
 
-        const snapshot = ctrl.snapshot()
-        if (!snapshot.tabs.length) {
-          removeCookie(cookieKey, options)
-        } else {
-          writeCookie(cookieKey, serialize(snapshot), options)
-        }
+        persistSnapshot()
       } finally {
         hydrating.value = false
       }
@@ -159,16 +195,15 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
       }),
       () => {
         if (hydrating.value) return
-        const snapshot = ctrl.snapshot()
-        if (!snapshot.tabs.length) {
-          removeCookie(cookieKey, options)
-        } else {
-          writeCookie(cookieKey, serialize(snapshot), options)
-        }
+        schedulePersistSnapshot()
       },
       { deep: true }
     )
   }
+
+  onBeforeUnmount(() => {
+    clearWriteTimer()
+  })
 
   if (controller) {
     setup(controller)

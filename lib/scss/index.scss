@@ -141,6 +141,7 @@
     background-color: transparent;
     border: 1px solid var(--router-tab-border);
     cursor: pointer;
+    outline: none;
     user-select: none;
     transition: var(--router-tab-transition);
     will-change: background-color, color;
@@ -152,6 +153,12 @@
     &:hover {
       background-color: color-mix(in srgb, var(--router-tab-primary) 4%, transparent);
       color: var(--router-tab-primary);
+    }
+
+    &:focus-visible {
+      z-index: 1;
+      outline: 2px solid var(--router-tab-primary);
+      outline-offset: -2px;
     }
 
     &.is-active {
@@ -206,6 +213,7 @@
       display: block;
       width: 0;
       height: $close-size;
+      padding: 0;
       flex-shrink: 0;
       overflow: hidden;
       border: none;
@@ -235,6 +243,11 @@
       &:hover {
         background: var(--router-tab-active-button-background);
         color: var(--router-tab-active-button-color);
+      }
+
+      &:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 1px;
       }
     }
 

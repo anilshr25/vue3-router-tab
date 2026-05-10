@@ -18,7 +18,8 @@ export type {
   TabInput,
   RouterTabsOptions,
   CloseTabOptions,
-  RouterTabsPersistenceOptions
+  RouterTabsPersistenceOptions,
+  RouterTabsPersistenceStorage
 } from './core/types'
 
 export type { RouterTabsThemeOptions } from './theme'

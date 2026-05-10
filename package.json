@@ -19,17 +19,22 @@
     "./style.css": "./dist/vue3-router-tab.css"
   },
   "scripts": {
+    "test": "vitest run",
     "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "check": "npm run typecheck && npm test",
     "build": "npm run typecheck && vite build",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run check && vite build"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/test-utils": "^2.4.10",
+    "jsdom": "^29.1.1",
     "sass": "^1.93.2",
     "sass-loader": "^16.0.5",
     "typescript": "^5.9.2",
     "vite": "^7.1.7",
     "vite-plugin-libcss": "^1.1.2",
+    "vitest": "^4.1.5",
     "vue": "^3.5.22",
     "vue-router": "^4.5.1",
     "vue-tsc": "^2.2.12"

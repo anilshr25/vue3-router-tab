@@ -1000,6 +1000,7 @@ useRouterTabsPersistence({
 </script>
 ```
 The composable also exposes `serialize` / `deserialize` options so you can encrypt or customise the cookie payload.
+Use `storage: 'localStorage'` or provide a custom storage adapter when cookies are not a good fit. `debounceMs` can reduce repeated writes during rapid tab changes.
 
 ## Theme system
 
@@ -1067,6 +1068,8 @@ Fine-grained control over tab persistence:
 <router-tab 
   :persistence="{
     cookieKey: 'my-app-tabs',
+    storage: 'localStorage',
+    debounceMs: 100,
     expiresInDays: 30,
     fallbackRoute: '/dashboard',
     serialize: (snapshot) => btoa(JSON.stringify(snapshot)),

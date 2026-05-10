@@ -12,16 +12,22 @@
         <transition-group
           tag="ul"
           class="router-tab__nav"
+          role="tablist"
           v-bind="tabTransitionProps"
         >
           <li
             v-for="(tab, index) in tabs"
             :key="tab.id"
+            role="tab"
             :class="buildTabClass(tab)"
             :data-title="getTabTitle(tab)"
+            :aria-selected="controller.activeId.value === tab.id"
+            :aria-current="controller.activeId.value === tab.id ? 'page' : undefined"
+            :tabindex="controller.activeId.value === tab.id ? 0 : -1"
             :draggable="sortable"
             :ref="(el) => setTabRef(tab.id, el as HTMLElement)"
             @click="activate(tab)"
+            @keydown="onTabKeydown(tab, index, $event)"
             @auxclick.middle.prevent="close(tab)"
             @contextmenu.prevent="showContextMenu(tab, $event)"
             @dragstart="onDragStart(tab, index, $event)"
@@ -35,10 +41,13 @@
             <span class="router-tab__item-title" :title="getReactiveTabTitle(tab)">
               {{ getReactiveTabTitle(tab) }}
             </span>
-            <a
+            <button
               v-if="isClosable(tab)"
+              type="button"
               class="router-tab__item-close"
+              :aria-label="`Close ${getReactiveTabTitle(tab)}`"
               @click.stop="close(tab)"
+              @keydown.stop
             />
           </li>
         </transition-group>
@@ -101,9 +110,10 @@
       @keydown="onMenuKeydown"
       :style="{ left: context.position.x + 'px', top: context.position.y + 'px' }"
     >
-      <a
+      <button
         v-for="(item, index) in menuItems"
         :key="item.id"
+        type="button"
         role="menuitem"
         :class="['router-tab__contextmenu-item', { 'is-focused': index === highlightedIndex }]"
         :aria-disabled="item.disabled"
@@ -114,7 +124,7 @@
         @click="handleMenuAction(item)"
       >
         {{ item.label }}
-  </a>
+      </button>
     </div>
   </div>
 </template>
@@ -124,24 +134,17 @@ import {
   computed,
   defineComponent,
   getCurrentInstance,
-  h,
-  nextTick,
   onBeforeUnmount,
   onErrorCaptured,
-  onMounted,
   provide,
-  reactive,
   ref,
   watch
 } from 'vue'
-import { RouterView, type RouteLocationNormalizedLoaded } from 'vue-router'
+import { RouterView } from 'vue-router'
 import type { PropType } from 'vue'
 import { createRouterTabs } from '../core/createRouterTabs'
 import type {
   RouterTabsMenuConfig,
-  RouterTabsMenuContext,
-  RouterTabsMenuItem,
-  RouterTabsMenuPreset,
   RouterTabsOptions,
   RouterTabsPersistenceOptions,
   TabInput,
@@ -151,13 +154,11 @@ import type {
 import { getTransOpt } from '../util/index'
 import { routerTabsKey, routerTabsCookie } from '../constants'
 import { useRouterTabsPersistence } from '../persistence'
-
-interface ResolvedMenuItem {
-  id: string
-  label: string
-  disabled: boolean
-  action: () => Promise<void>
-}
+import { useKeepAliveComponentCache } from '../useKeepAliveComponentCache'
+import { useReactiveTabWatcher } from '../useReactiveTabWatcher'
+import { useTabNavigation } from '../useTabNavigation'
+import { useTabContextMenu } from '../useTabContextMenu'
+import { useTabDragSort } from '../useTabDragSort'
 
 const RouterTab = defineComponent({
   name: 'RouterTab',
@@ -244,188 +245,12 @@ const RouterTab = defineComponent({
     const hasStartSlot = computed(() => Boolean(instance?.slots?.start))
     const hasEndSlot = computed(() => Boolean(instance?.slots?.end))
 
-    // Force reactivity by creating a trigger ref
-    const tabUpdateTrigger = ref(0)
-    
-    // Reactive tab titles that update when tabs change
-    const reactiveTabTitles = computed(() => {
-      // Access the trigger to ensure reactivity
-      tabUpdateTrigger.value
-      const titles: Record<string, string> = {}
-      controller.tabs.forEach(tab => {
-        // Use the tab's current title (which is updated by watchers)
-        const currentTitle = typeof tab.title === 'string' ? tab.title : String(tab.title || getTabTitle(tab))
-        titles[tab.id] = currentTitle
-      })
-      return titles
-    })
-
-    // Function to trigger reactivity updates
-    function triggerTabUpdate() {
-      tabUpdateTrigger.value++
-    }
-
-    // Reactive tab update system
-    const componentInstances = new Map<string, unknown>()
-    const watchedProperties = new Map<string, (() => void)[]>()
-
-    // Watch for component instance changes and set up reactivity
-    function setupComponentWatching(routeKey: string, componentInstance: any) {
-      if (!componentInstance || componentInstances.has(routeKey)) return
-      
-      try {
-        // setup watchers for exposed reactive tab props
-        
-        componentInstances.set(routeKey, componentInstance)
-        
-        // Find the tab for this route
-        const tab = controller.tabs.find(t => controller.getRouteKey(t.to) === routeKey)
-        if (!tab) {
-          console.warn(`[RouterTab] Cannot setup watching: tab not found for ${routeKey}`)
-          return
-        }
-        
-        const unwatchers: (() => void)[] = []
-        
-        // Watch routeTabTitle for title updates
-        if (componentInstance.routeTabTitle !== undefined) {
-          try {
-            const unwatchTitle = watch(
-              () => {
-                // Handle both ref values and regular values
-                const titleValue = componentInstance.routeTabTitle
-                return titleValue && typeof titleValue === 'object' && 'value' in titleValue ? titleValue.value : titleValue
-              },
-              (newTitle) => {
-                if (newTitle !== undefined && newTitle !== null) {
-                  const titleString = String(newTitle)
-                  tab.title = titleString
-                  triggerTabUpdate() // Trigger reactivity
-                }
-              },
-              { immediate: true }
-            )
-            unwatchers.push(unwatchTitle)
-          } catch (error) {
-            console.error(`[RouterTab] Error watching routeTabTitle for ${routeKey}:`, error)
-          }
-        }
-        
-        // Watch routeTabIcon for icon updates
-        if (componentInstance.routeTabIcon !== undefined) {
-          try {
-            const unwatchIcon = watch(
-              () => {
-                const iconValue = componentInstance.routeTabIcon
-                return iconValue && typeof iconValue === 'object' && 'value' in iconValue ? iconValue.value : iconValue
-              },
-              (newIcon) => {
-                if (newIcon !== undefined && newIcon !== null) {
-                  tab.icon = String(newIcon)
-                  triggerTabUpdate() // Trigger reactivity
-                }
-              },
-              { immediate: true }
-            )
-            unwatchers.push(unwatchIcon)
-          } catch (error) {
-            console.error(`[RouterTab] Error watching routeTabIcon for ${routeKey}:`, error)
-          }
-        }
-        
-        // Watch routeTabClosable for closable state updates
-        if (componentInstance.routeTabClosable !== undefined) {
-          try {
-            const unwatchClosable = watch(
-              () => {
-                const closableValue = componentInstance.routeTabClosable
-                return closableValue && typeof closableValue === 'object' && 'value' in closableValue ? closableValue.value : closableValue
-              },
-              (newClosable) => {
-                if (newClosable !== undefined && newClosable !== null) {
-                  tab.closable = Boolean(newClosable)
-                  triggerTabUpdate() // Trigger reactivity
-                }
-              },
-              { immediate: true }
-            )
-            unwatchers.push(unwatchClosable)
-          } catch (error) {
-            console.error(`[RouterTab] Error watching routeTabClosable for ${routeKey}:`, error)
-          }
-        }
-
-        // Watch routeTabMeta for general meta updates
-        if (componentInstance.routeTabMeta !== undefined) {
-          try {
-            const unwatchMeta = watch(
-              () => {
-                const metaValue = componentInstance.routeTabMeta
-                return metaValue && typeof metaValue === 'object' && 'value' in metaValue ? metaValue.value : metaValue
-              },
-              (newMeta) => {
-                if (newMeta && typeof newMeta === 'object') {
-                  Object.assign(tab, newMeta)
-                  triggerTabUpdate() // Trigger reactivity
-                }
-              },
-              { immediate: true, deep: true }
-            )
-            unwatchers.push(unwatchMeta)
-          } catch (error) {
-            console.error(`[RouterTab] Error watching routeTabMeta for ${routeKey}:`, error)
-          }
-        }
-        
-        watchedProperties.set(routeKey, unwatchers)
-      } catch (error) {
-        console.error(`[RouterTab] Error in setupComponentWatching for ${routeKey}:`, error)
-        // Clean up on error
-        cleanupComponentWatching(routeKey)
-      }
-    }
-    
-    // Cleanup watchers when component is unmounted
-    function cleanupComponentWatching(routeKey: string) {
-      try {
-        const unwatchers = watchedProperties.get(routeKey)
-        if (unwatchers) {
-          unwatchers.forEach(unwatcher => {
-            try {
-              unwatcher()
-            } catch (error) {
-              console.error(`[RouterTab] Error cleaning up watcher for ${routeKey}:`, error)
-            }
-          })
-          watchedProperties.delete(routeKey)
-        }
-        componentInstances.delete(routeKey)
-      } catch (error) {
-        console.error(`[RouterTab] Error in cleanupComponentWatching for ${routeKey}:`, error)
-      }
-    }
-    
-    // Handle component ref changes
-    function handleComponentRef(el: any, routeKey: string) {
-      try {
-        if (el) {
-          // Component mounted - set up watching
-          // Check if properties are exposed directly on el (Vue 3 with defineExpose)
-          if (el.routeTabTitle !== undefined || el.routeTabIcon !== undefined || el.routeTabClosable !== undefined) {
-            setupComponentWatching(routeKey, el)
-          } else if (el.$ && (el.$.routeTabTitle !== undefined || el.$.routeTabIcon !== undefined || el.$.routeTabClosable !== undefined)) {
-            setupComponentWatching(routeKey, el.$)
-          }
-        } else if (el === null) {
-          // Component unmounted - cleanup
-          cleanupComponentWatching(routeKey)
-        }
-      } catch (error) {
-        console.error(`[RouterTab] Error handling component ref for ${routeKey}:`, error)
-        // Clean up on error to prevent stale state
-        cleanupComponentWatching(routeKey)
-      }
-    }
+    const {
+      handleComponentRef,
+      cleanupStaleWatchers,
+      cleanupAllWatchers,
+      getReactiveTabTitle
+    } = useReactiveTabWatcher(controller)
 
     // Error handling: Capture errors from child components
     onErrorCaptured((err, instance, info) => {
@@ -444,7 +269,7 @@ const RouterTab = defineComponent({
         ...(props.persistence ?? {})
       }
       if (props.cookieKey !== null) {
-        options.cookieKey = props.cookieKey || routerTabsCookie
+        options.cookieKey = options.cookieKey ?? (props.cookieKey || routerTabsCookie)
       } else if (!options.cookieKey) {
         options.cookieKey = routerTabsCookie
       }
@@ -455,318 +280,32 @@ const RouterTab = defineComponent({
     const tabTransitionProps = computed(() => getTransOpt(props.tabTransition))
     const pageTransitionProps = computed(() => getTransOpt(props.pageTransition))
 
-    const context = reactive({
-      visible: false,
-      target: null as TabRecord | null,
-      position: { x: 0, y: 0 }
-    })
-
-    const menuRef = ref<HTMLElement | null>(null)
-    const menuItemRefs = ref<(HTMLElement | null)[]>([])
-    const highlightedIndex = ref(-1)
-    const scrollContainer = ref<HTMLElement | null>(null)
-    const tabRefs = new Map<string, HTMLElement>()
-
-    // Drag and drop state
-    const dragState = reactive({
-      dragging: false,
-      dragIndex: -1,
-      dropIndex: -1,
-      dragTab: null as TabRecord | null
-    })
-
-    type MenuConfig = RouterTabsMenuConfig
-    type MenuActionContext = RouterTabsMenuContext
-    type CustomMenuOption = RouterTabsMenuItem
-    type MenuPresetId = RouterTabsMenuPreset
-
-    type BuiltinMenuItem = {
-      label: string
-      handler: (ctx: MenuActionContext) => void | Promise<void>
-      enable?: (ctx: MenuActionContext) => boolean
-      visible?: (ctx: MenuActionContext) => boolean
-    }
-
-    const defaultMenuOrder: MenuPresetId[] = [
-      'refresh',
-      'refreshAll',
-      'close',
-      'closeLefts',
-      'closeRights',
-      'closeOthers'
-    ]
+    const {
+      dragState,
+      onDragStart,
+      onDragOver,
+      onDragEnter,
+      onDragLeave,
+      onDrop,
+      onDragEnd
+    } = useTabDragSort(controller.tabs, () => props.sortable, emit)
 
     function getTabIndex(id: string) {
       return controller.tabs.findIndex(item => item.id === id)
     }
 
-    function getLeftTabs(tab: TabRecord) {
-      const idx = getTabIndex(tab.id)
-      return idx > 0 ? controller.tabs.slice(0, idx) : []
-    }
-
-    function getRightTabs(tab: TabRecord) {
-      const idx = getTabIndex(tab.id)
-      return idx > -1 ? controller.tabs.slice(idx + 1) : []
-    }
-
-    function getOtherTabs(tab: TabRecord) {
-      return controller.tabs.filter(item => item.id !== tab.id)
-    }
-
-    async function closeTabsGroup(tabsToClose: TabRecord[], reference: TabRecord) {
-      const closable = tabsToClose.filter(item => item.closable !== false)
-      if (!closable.length) return
-
-      for (const tab of closable) {
-        if (controller.activeId.value === tab.id) {
-          await controller.closeTab(tab.id, { redirect: reference.to, force: true })
-        } else {
-          await controller.removeTab(tab.id, { force: true })
-        }
-      }
-
-      if (controller.activeId.value !== reference.id) {
-        await controller.openTab(reference.to, true, false)
-      }
-    }
-
-    const builtinMenu: Record<MenuPresetId, BuiltinMenuItem> = {
-      refresh: {
-        label: 'Refresh',
-        handler: async ({ target }) => {
-          await controller.refreshTab(target.id, true)
-        }
-      },
-      refreshAll: {
-        label: 'Refresh All',
-        handler: async () => {
-          await controller.refreshAll(true)
-        }
-      },
-      close: {
-        label: 'Close',
-        handler: async ({ target }) => {
-          await controller.closeTab(target.id)
-        },
-        enable: ({ target }) => isClosable(target)
-      },
-      closeLefts: {
-        label: 'Close to the Left',
-        handler: async ({ target }) => {
-          await closeTabsGroup(getLeftTabs(target), target)
-        },
-        enable: ({ target }) => getLeftTabs(target).some(tab => tab.closable !== false)
-      },
-      closeRights: {
-        label: 'Close to the Right',
-        handler: async ({ target }) => {
-          await closeTabsGroup(getRightTabs(target), target)
-        },
-        enable: ({ target }) => getRightTabs(target).some(tab => tab.closable !== false)
-      },
-      closeOthers: {
-        label: 'Close Others',
-        handler: async ({ target }) => {
-          await closeTabsGroup(getOtherTabs(target), target)
-        },
-        enable: ({ target }) => getOtherTabs(target).some(tab => tab.closable !== false)
-      }
-    }
-
-    function hideContextMenu() {
-      context.visible = false
-      context.target = null
-      highlightedIndex.value = -1
-      menuItemRefs.value = []
-    }
-
-    function showContextMenu(tab: TabRecord, event: MouseEvent) {
-      if (!props.contextMenu) return
-      
-      // Batch updates to prevent multiple reactive triggers
-      context.target = tab
-      context.position.x = event.clientX
-      context.position.y = event.clientY
-      
-      // Set visible last to trigger watchers only once with all data ready
-      nextTick(() => {
-        context.visible = true
-        document.addEventListener('click', hideContextMenu, { once: true })
-        nextTick(() => {
-          adjustMenuPosition()
-        })
-      })
-    }
-
-    function normalizeMenuItem(raw: MenuConfig, ctx: MenuActionContext): ResolvedMenuItem | null {
-      const config: CustomMenuOption = typeof raw === 'string' ? { id: raw } : raw
-      const builtin = builtinMenu[config.id as MenuPresetId]
-
-      const label = config.label ?? builtin?.label ?? String(config.id)
-
-      const visibleResolver = config.visible ?? builtin?.visible ?? true
-      const isVisible = typeof visibleResolver === 'function' ? visibleResolver(ctx) : visibleResolver !== false
-      if (!isVisible) return null
-
-      const enableResolver = config.enable ?? builtin?.enable ?? true
-      const isEnabled = typeof enableResolver === 'function' ? enableResolver(ctx) : enableResolver !== false
-
-      const sourceHandler = config.handler ?? builtin?.handler
-      if (!sourceHandler) return null
-
-      const action = async () => {
-        await Promise.resolve(sourceHandler(ctx))
-      }
-
-      return {
-        id: String(config.id),
-        label,
-        disabled: !isEnabled,
-        action
-      }
-    }
-
-    const menuItems = computed<ResolvedMenuItem[]>(() => {
-      // Early return to prevent computation when menu is hidden
-      if (!context.visible || !context.target || props.contextMenu === false) return []
-      
-      const source = Array.isArray(props.contextMenu) ? props.contextMenu : defaultMenuOrder
-      const ctx: MenuActionContext = { target: context.target, controller }
-      
-      // Map and filter in one pass for better performance
-      return source
-        .map(item => normalizeMenuItem(item, ctx))
-        .filter((item): item is ResolvedMenuItem => !!item)
-    })
-
-    function adjustMenuPosition() {
-      const menuEl = menuRef.value
-      if (!menuEl) return
-      const margin = 8
-      const { innerWidth, innerHeight } = window
-      const rect = menuEl.getBoundingClientRect()
-
-      let nextX = context.position.x
-      let nextY = context.position.y
-
-      if (rect.right > innerWidth - margin) {
-        nextX = Math.max(margin, innerWidth - rect.width - margin)
-      }
-
-      if (rect.bottom > innerHeight - margin) {
-        nextY = Math.max(margin, innerHeight - rect.height - margin)
-      }
-
-      if (nextX !== context.position.x || nextY !== context.position.y) {
-        context.position.x = nextX
-        context.position.y = nextY
-      }
-    }
-
-    function setMenuItemRef(el: any | null, index: number) {
-      menuItemRefs.value[index] = (el as HTMLElement) ?? null
-    }
-
-    function focusMenuItem(index: number) {
-      if (index < 0) return
-      const el = menuItemRefs.value[index]
-      el?.focus({ preventScroll: true })
-    }
-
-    function findNextEnabledIndex(start: number, step: 1 | -1, items = menuItems.value): number {
-      if (!items.length) return -1
-      const total = items.length
-      let idx = start
-
-      for (let i = 0; i < total; i++) {
-        idx = (idx + step + total) % total
-        if (!items[idx].disabled) return idx
-      }
-
-      return -1
-    }
-
-    function highlightMenuIndex(index: number) {
-      highlightedIndex.value = index
-      if (index < 0) return
-      nextTick(() => focusMenuItem(index))
-    }
-
-    function moveHighlight(step: 1 | -1) {
-      const nextIndex = findNextEnabledIndex(highlightedIndex.value, step)
-      if (nextIndex !== -1) {
-        highlightMenuIndex(nextIndex)
-      }
-    }
-
-    function onMenuKeydown(event: KeyboardEvent) {
-      if (!context.visible) return
-
-      const key = event.key
-      const items = menuItems.value
-      if (!items.length) return
-
-      if (key === 'Tab') {
-        hideContextMenu()
-        return
-      }
-
-      const handledKeys = [
-        'ArrowDown',
-        'ArrowUp',
-        'ArrowRight',
-        'ArrowLeft',
-        'Home',
-        'End',
-        'Enter',
-        ' ',
-        'Spacebar',
-        'Escape'
-      ]
-
-      if (!handledKeys.includes(key)) return
-
-      event.preventDefault()
-
-      switch (key) {
-        case 'ArrowDown':
-        case 'ArrowRight':
-          moveHighlight(1)
-          break
-        case 'ArrowUp':
-        case 'ArrowLeft':
-          moveHighlight(-1)
-          break
-        case 'Home':
-          highlightMenuIndex(findNextEnabledIndex(-1, 1))
-          break
-        case 'End':
-          highlightMenuIndex(findNextEnabledIndex(items.length, -1))
-          break
-        case 'Enter':
-        case ' ':
-        case 'Spacebar': {
-          const index = highlightedIndex.value
-          if (index > -1) {
-            const item = items[index]
-            if (!item.disabled) {
-              handleMenuAction(item)
-            }
-          }
-          break
-        }
-        case 'Escape':
-          hideContextMenu()
-          break
-      }
-    }
-
-    async function handleMenuAction(item: ResolvedMenuItem) {
-      if (item.disabled) return
-      hideContextMenu()
-      await item.action()
-    }
+    const {
+      context,
+      menuRef,
+      highlightedIndex,
+      menuItems,
+      handleMenuAction,
+      showContextMenu,
+      hideContextMenu,
+      setMenuItemRef,
+      onMenuKeydown,
+      highlightMenuIndex
+    } = useTabContextMenu(controller, () => props.contextMenu, isClosable)
 
     function getTabTitle(tab: TabRecord): string {
       if (typeof tab.title === 'string' && tab.title.trim()) return tab.title
@@ -774,147 +313,12 @@ const RouterTab = defineComponent({
       return 'Untitled'
     }
     
-    // Reactive function to get tab title
-    function getReactiveTabTitle(tab: TabRecord): string {
-      // Access the reactive titles to ensure reactivity
-      const reactiveTitles = reactiveTabTitles.value
-      return reactiveTitles[tab.id] || getTabTitle(tab)
-    }
-
-    /**
-     * Creates a wrapper component with a specific name for KeepAlive caching.
-     * This is necessary because KeepAlive's include prop matches component names.
-     */
-    function createNamedComponent(component: any, name: string) {
-      return defineComponent({
-        name,
-        setup(_, { attrs, slots }) {
-          const innerRef = ref<any>()
-
-          // Forward tab props to the wrapper proxy so handleComponentRef can see them
-          const instance = getCurrentInstance()
-          if (instance?.proxy) {
-            const proxy = instance.proxy as any
-            const forwardProps: Record<string, () => any> = {
-              routeTabTitle: () => innerRef.value?.routeTabTitle,
-              routeTabIcon: () => innerRef.value?.routeTabIcon,
-              routeTabClosable: () => innerRef.value?.routeTabClosable,
-              routeTabMeta: () => innerRef.value?.routeTabMeta,
-              $: () => innerRef.value
-            }
-
-            Object.entries(forwardProps).forEach(([key, getter]) => {
-              Object.defineProperty(proxy, key, {
-                get: getter,
-                configurable: true
-              })
-            })
-          }
-
-          return () => h(component, { ...attrs, ref: innerRef }, slots)
-        }
-      })
-    }
-
-    // Cache for component references from RouterView (non-reactive to avoid circular reference issues)
-    const componentCache = new Map<string, unknown>()
-    const componentCacheTrigger = ref(0) // Trigger reactivity manually
-
-    function pruneComponentCache() {
-      const validKeys = new Set(controller.tabs.map(tab => `${tab.id}::${tab.renderKey ?? 0}`))
-      let removed = false
-
-      Array.from(componentCache.keys()).forEach(key => {
-        if (!validKeys.has(key)) {
-          componentCache.delete(key)
-          removed = true
-        }
-      })
-
-      if (removed) {
-        componentCacheTrigger.value++
-      }
-    }
-
-    /**
-     * Cache the current component without triggering infinite loops.
-     * Called from ref callback, only caches once per route key.
-     */
-    function cacheCurrentComponent(el: any, component: any, key: string): void {
-      if (!componentCache.has(key)) {
-        componentCache.set(key, component)
-        componentCacheTrigger.value++
-      }
-      // Always handle the component ref to set up watchers
-      if (el) {
-        handleComponentRef(el, key)
-      }
-    }
-
-    /**
-     * Ensures a component has a name for KeepAlive to cache properly.
-     * Assigns the cache key as the component's name directly.
-     */
-    function ensureNamedComponent(component: any, cacheKey: string) {
-      if (!component) return component
-      
-      // Directly assign the name to the component
-      // This mutates the component but is necessary for KeepAlive matching
-      if (!component.name || component.name !== cacheKey) {
-        component.name = cacheKey
-      }
-      
-      return component
-    }
-
-    /**
-     * Returns a component wrapper with a stable name for KeepAlive include matching.
-     * Caches the wrapper per cacheKey to avoid recreating components on each render.
-     */
-    function getNamedComponent(component: any, cacheKey: string) {
-      if (!component) return component
-      const cached = componentCache.get(cacheKey)
-      if (cached) return cached
-
-      const wrapped = createNamedComponent(component, cacheKey)
-      componentCache.set(cacheKey, wrapped)
-      componentCacheTrigger.value++
-      return wrapped
-    }
-
-    /**
-     * Determines if a route should be rendered.
-     * Used to control which component is visible within KeepAlive.
-     */
-    function shouldRenderRoute(route: RouteLocationNormalizedLoaded): boolean {
-      const currentRouteKey = controller.getRouteKey(route)
-      const currentRoute = router.currentRoute.value
-      const activeRouteKey = controller.getRouteKey(currentRoute)
-      
-      return currentRouteKey === activeRouteKey
-    }
-
-    /**
-     * Generates the KeepAlive cache key for a component.
-     * Format: `{routeKey}::{renderKey}`
-     * 
-     * Example: '/quiz-results::0' (first mount), '/quiz-results::1' (after refresh)
-     * 
-     * The renderKey is incremented on manual refresh to force component recreation.
-     * Stable renderKey during navigation allows KeepAlive to preserve component state.
-     */
-    function getComponentCacheKey(route: RouteLocationNormalizedLoaded): string {
-      const routeKey = controller.getRouteKey(route)
-      const tab = controller.tabs.find(item => item.id === routeKey)
-      
-      if (!tab) {
-        return `${routeKey}::0`
-      }
-      
-      const renderKey = tab.renderKey ?? 0
-      const cacheKey = `${routeKey}::${renderKey}`
-      return cacheKey
-    }
+    const {
+      getNamedComponent,
+      getComponentCacheKey,
+      pruneComponentCache,
+      clearComponentCache
+    } = useKeepAliveComponentCache(controller)
 
     function isClosable(tab: TabRecord) {
       if (tab.closable === false) return false
@@ -926,55 +330,13 @@ const RouterTab = defineComponent({
       await controller.closeTab(tab.id)
     }
 
-    // Store tab element references for scroll-into-view
-    function setTabRef(tabId: string, el: HTMLElement | null) {
-      if (el) {
-        tabRefs.set(tabId, el)
-      } else {
-        tabRefs.delete(tabId)
-      }
-    }
-
-    // Scroll tab into view when activated
-    function scrollTabIntoView(tabId: string) {
-      nextTick(() => {
-        const tabEl = tabRefs.get(tabId)
-        const container = scrollContainer.value
-
-        if (tabEl && container) {
-          // Calculate if tab is within view
-          const tabRect = tabEl.getBoundingClientRect()
-          const containerRect = container.getBoundingClientRect()
-
-          // Check if tab is outside the visible area
-          const isOutOfView = tabRect.left < containerRect.left || tabRect.right > containerRect.right
-
-          if (isOutOfView) {
-            // Scroll the tab into view with smooth behavior
-            tabEl.scrollIntoView({
-              behavior: 'smooth',
-              block: 'nearest',
-              inline: 'nearest'
-            })
-          }
-        }
-      })
-    }
-
-    function activate(tab: TabRecord) {
-      if (tab.href && typeof window !== 'undefined') {
-        if (tab.target && tab.target !== '_self') {
-          window.open(tab.href as string, tab.target)
-        } else {
-          window.location.assign(tab.href as string)
-        }
-        return
-      }
-
-      if (controller.activeId.value === tab.id) return
-      controller.openTab(tab.to, false)
-      scrollTabIntoView(tab.id)
-    }
+    const {
+      scrollContainer,
+      setTabRef,
+      scrollTabIntoView,
+      activate,
+      onTabKeydown
+    } = useTabNavigation(controller, close, isClosable)
 
     function buildTabClass(tab: TabRecord) {
       return [
@@ -989,104 +351,14 @@ const RouterTab = defineComponent({
       ]
     }
 
-    function isTabCached(route: RouteLocationNormalizedLoaded) {
-      const routeKey = controller.getRouteKey(route)
-      const tab = controller.tabs.find(tab => tab.id === routeKey)
-      return tab ? tab.alive : false
-    }
-
-    function isTabReady(route: RouteLocationNormalizedLoaded) {
-      const routeKey = controller.getRouteKey(route)
-      const tab = controller.tabs.find(tab => tab.id === routeKey)
-      
-      if (!tab) return false
-      
-      // Always return true - let KeepAlive handle the caching logic
-      // The tab exists in the tabs array, so it should be rendered
-      return true
-    }
-
-    // Drag and drop handlers
-    function onDragStart(tab: TabRecord, index: number, event: DragEvent) {
-      if (!props.sortable) return
-      
-      dragState.dragging = true
-      dragState.dragIndex = index
-      dragState.dragTab = tab
-      
-      if (event.dataTransfer) {
-        event.dataTransfer.effectAllowed = 'move'
-        event.dataTransfer.setData('text/plain', tab.id)
-      }
-
-      emit('tab-sort', { tab, index })
-    }
-
-    function onDragOver(index: number, event: DragEvent) {
-      if (!props.sortable || !dragState.dragging) return
-      event.preventDefault()
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = 'move'
-      }
-    }
-
-    function onDragEnter(index: number) {
-      if (!props.sortable || !dragState.dragging) return
-      dragState.dropIndex = index
-    }
-
-    function onDragLeave() {
-      if (!props.sortable || !dragState.dragging) return
-      // Don't reset dropIndex immediately to prevent flicker
-    }
-
-    function onDrop(index: number, event: DragEvent) {
-      if (!props.sortable || !dragState.dragging) return
-      
-      event.preventDefault()
-      
-      if (dragState.dragIndex !== -1 && dragState.dragIndex !== index) {
-        const movedTab = controller.tabs.splice(dragState.dragIndex, 1)[0]
-        controller.tabs.splice(index, 0, movedTab)
-        
-        emit('tab-sorted', {
-          tab: movedTab,
-          fromIndex: dragState.dragIndex,
-          toIndex: index
-        })
-      }
-
-      onDragEnd()
-    }
-
-    function onDragEnd() {
-      dragState.dragging = false
-      dragState.dragIndex = -1
-      dragState.dropIndex = -1
-      dragState.dragTab = null
-    }
-
-    onMounted(() => {
-      document.addEventListener('keydown', hideContextMenu)
-    })
-
     onBeforeUnmount(() => {
-      document.removeEventListener('keydown', hideContextMenu)
-      instance.appContext.config.globalProperties.$tabs = null
+      const globals = instance.appContext.config.globalProperties
+      if (globals.$tabs === controller) {
+        globals.$tabs = null
+      }
       
-      // Cleanup all component watchers
-      watchedProperties.forEach((unwatchers) => {
-        unwatchers.forEach(unwatcher => {
-          try {
-            unwatcher()
-          } catch (error) {
-            console.error('[RouterTab] Error during cleanup:', error)
-          }
-        })
-      })
-      watchedProperties.clear()
-      componentInstances.clear()
-      componentCache.clear()
+      cleanupAllWatchers()
+      clearComponentCache()
     })
 
     watch(
@@ -1096,30 +368,11 @@ const RouterTab = defineComponent({
       }
     )
 
-    watch(
-      () => controller.activeId.value,
-      (newActiveId) => {
-        if (newActiveId) {
-          scrollTabIntoView(newActiveId)
-        }
-        hideContextMenu()
-      }
-    )
-
     // Clean up stale component instances when tabs are closed
     watch(
       () => controller.tabs.length,
       () => {
-        // Check for stale component instances
-        const currentTabIds = new Set(controller.tabs.map(tab => tab.id))
-        const instanceKeys = Array.from(componentInstances.keys())
-        
-        instanceKeys.forEach(key => {
-          if (!currentTabIds.has(key)) {
-            cleanupComponentWatching(key)
-          }
-        })
-
+        cleanupStaleWatchers()
         pruneComponentCache()
       }
     )
@@ -1131,37 +384,6 @@ const RouterTab = defineComponent({
       }
     )
 
-    watch(() => props.contextMenu, value => {
-      if (!value) hideContextMenu()
-    })
-
-    watch(
-      () => menuItems.value.length,
-      length => {
-        if (context.visible && length === 0) {
-          hideContextMenu()
-        }
-      },
-      { flush: 'post' } // Run after component updates to prevent blocking render
-    )
-
-    watch(menuItems, items => {
-      if (!context.visible) return // Skip if menu is hidden
-      menuItemRefs.value = new Array(items.length).fill(null)
-      const first = findNextEnabledIndex(-1, 1, items)
-      highlightMenuIndex(first)
-    }, { flush: 'post' }) // Run after DOM updates
-
-    watch(
-      () => context.visible,
-      visible => {
-        if (!visible) {
-          highlightedIndex.value = -1
-          menuItemRefs.value = []
-        }
-      }
-    )
-
     const includeKeys = controller.includeKeys
 
     return {
@@ -1169,14 +391,12 @@ const RouterTab = defineComponent({
       tabs: controller.tabs,
       includeKeys,
       persistenceHydrating,
-      componentCache,
-      componentCacheTrigger,
-      cacheCurrentComponent,
       tabTransitionProps,
       pageTransitionProps,
       buildTabClass,
       activate,
       close,
+      onTabKeydown,
       context,
       menuItems,
       handleMenuAction,
@@ -1184,8 +404,6 @@ const RouterTab = defineComponent({
       hideContextMenu,
       getTabTitle,
       isClosable,
-      isTabCached,
-      isTabReady,
       hasCustomSlot,
       hasStartSlot,
       hasEndSlot,
@@ -1195,16 +413,10 @@ const RouterTab = defineComponent({
       onDragLeave,
       onDrop,
       onDragEnd,
-      setupComponentWatching,
-      cleanupComponentWatching,
       handleComponentRef,
       getReactiveTabTitle,
       getComponentCacheKey,
-      createNamedComponent,
-      ensureNamedComponent,
       getNamedComponent,
-      shouldRenderRoute,
-      triggerTabUpdate,
       menuRef,
       highlightedIndex,
       setMenuItemRef,

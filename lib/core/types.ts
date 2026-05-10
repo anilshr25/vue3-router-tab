@@ -122,8 +122,16 @@ export interface RouterTabsContext {
   ensureTab: (route: RouteLocationNormalizedLoaded) => TabRecord | undefined
 }
 
+export interface RouterTabsPersistenceStorage {
+  read: (key: string) => string | null
+  write: (key: string, value: string, options: RouterTabsPersistenceOptions) => void
+  remove: (key: string, options: RouterTabsPersistenceOptions) => void
+}
+
 export interface RouterTabsPersistenceOptions {
   cookieKey?: string
+  storage?: 'cookie' | 'localStorage' | RouterTabsPersistenceStorage
+  debounceMs?: number
   expiresInDays?: number
   path?: string
   domain?: string
