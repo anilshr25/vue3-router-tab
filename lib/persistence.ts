@@ -1,4 +1,4 @@
-import { nextTick, onBeforeMount, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
+import { onBeforeMount, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
 import { useRouterTabs } from './useRouterTabs'
 import type {
   RouterTabsPersistenceOptions,
@@ -113,6 +113,8 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
   // This prevents double-mount / double-fetch on initial load when restoring tabs.
   const hydrating = ref(true)
   const storage = resolveStorage(storageOption)
+  let disposed = false
+  let flushPending: (() => void) | undefined
   let writeTimer: ReturnType<typeof setTimeout> | null = null
 
   function clearWriteTimer() {
@@ -123,15 +125,22 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
 
   const setup = (ctrl: NonNullable<typeof controller>, mode: 'hook' | 'immediate' = 'hook') => {
     const persistSnapshot = () => {
-      const snapshot = ctrl.snapshot()
-      if (!snapshot.tabs.length) {
-        storage.remove(cookieKey, options)
-      } else {
-        storage.write(cookieKey, serialize(snapshot), options)
+      try {
+        const snapshot = ctrl.snapshot()
+        if (!snapshot.tabs.length) {
+          storage.remove(cookieKey, options)
+        } else {
+          storage.write(cookieKey, serialize(snapshot), options)
+        }
+      } catch (error) {
+        console.warn('[RouterTabs] Failed to persist tabs', error)
       }
     }
 
+    flushPending = persistSnapshot
+
     const schedulePersistSnapshot = () => {
+      if (disposed) return
       if (debounceMs <= 0) {
         persistSnapshot()
         return
@@ -152,20 +161,14 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
 
         if (initialSnapshot && initialSnapshot.tabs?.length) {
           await ctrl.hydrate(initialSnapshot)
-          if (initialSnapshot.active) {
-            await nextTick()
-            const activeTab = ctrl.tabs.find(t => t.to === initialSnapshot.active)
-            if (activeTab) {
-              ctrl.activeId.value = activeTab.id
-              ctrl.current.value = activeTab
-            }
-          }
         } else if (Object.prototype.hasOwnProperty.call(options, 'fallbackRoute')) {
           const fallback = options.fallbackRoute ?? ctrl.options.defaultRoute
           await ctrl.reset(fallback)
         }
 
-        persistSnapshot()
+        if (!disposed) persistSnapshot()
+      } catch (error) {
+        console.warn('[RouterTabs] Failed to restore persisted tabs', error)
       } finally {
         hydrating.value = false
       }
@@ -202,6 +205,8 @@ export function useRouterTabsPersistence(options: RouterTabsPersistenceOptions =
   }
 
   onBeforeUnmount(() => {
+    disposed = true
+    if (writeTimer !== null) flushPending?.()
     clearWriteTimer()
   })
 

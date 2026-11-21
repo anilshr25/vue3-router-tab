@@ -183,3 +183,48 @@ describe('tab lifecycle regressions', () => {
     expect(tabs.getCacheKeys()).toEqual(['/::0'])
   })
 })
+
+it('keeps active state consistent when hydration navigation is cancelled', async () => {
+  const router = await createReadyRouter('/')
+  const tabs = createRouterTabs(router)
+  router.beforeEach(to => to.path !== '/users')
+  await tabs.hydrate({ tabs: [{ to: '/users' }], active: '/users' })
+  expect(router.currentRoute.value.fullPath).toBe('/')
+  expect(tabs.activeId.value).toBe('/')
+  expect(tabs.current.value?.fullPath).toBe('/')
+})
+
+it('deduplicates preset tabs on reset', async () => {
+  const router = await createReadyRouter('/')
+  const tabs = createRouterTabs(router, { initialTabs: [{ to: '/users' }, { to: '/users' }] })
+  await tabs.reset('/')
+  expect(tabs.tabs.filter(tab => tab.id === '/users')).toHaveLength(1)
+})
+
+it('does not cache duplicate snapshot render keys', async () => {
+  const router = await createReadyRouter('/users')
+  const tabs = createRouterTabs(router)
+  await tabs.hydrate({ tabs: [{ to: '/users', renderKey: 1 }, { to: '/users', renderKey: 2 }], active: '/users' })
+  expect(tabs.tabs).toHaveLength(1)
+  expect(tabs.getCacheKeys()).toEqual(['/users::1'])
+})
+
+it('preserves existing tabs and cache when reset navigation is blocked', async () => {
+  const router = await createReadyRouter('/')
+  const tabs = createRouterTabs(router)
+  await tabs.openTab('/users')
+  const before = tabs.snapshot()
+  const cache = tabs.getCacheKeys()
+  router.beforeEach(to => to.path !== '/settings')
+  await tabs.reset('/settings')
+  expect(tabs.snapshot()).toEqual(before)
+  expect(tabs.getCacheKeys()).toEqual(cache)
+})
+
+it('preserves existing tabs when resetting to an invalid destination', async () => {
+  const router = await createReadyRouter('/users')
+  const tabs = createRouterTabs(router)
+  const before = tabs.snapshot()
+  await expect(tabs.reset({ name: 'missing-route' })).rejects.toThrow()
+  expect(tabs.snapshot()).toEqual(before)
+})

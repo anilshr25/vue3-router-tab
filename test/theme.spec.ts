@@ -2,7 +2,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { initRouterTabsTheme, setRouterTabsTheme } from '../lib/theme'
 
-afterEach(() => { localStorage.clear(); vi.unstubAllGlobals() })
+afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); vi.unstubAllGlobals() })
 
 it('updates inline palette values on explicit and system theme changes', () => {
   let listener: (() => void) | undefined
@@ -30,5 +30,14 @@ it('preserves a custom palette when switching themes', () => {
   initRouterTabsTheme({ primaryKey: 'custom-palette' })
   setRouterTabsTheme('dark')
   expect(document.documentElement.style.getPropertyValue('--router-tab-primary')).toBe('#123456')
+  expect(document.documentElement.style.getPropertyValue('--router-tab-background')).toBe('#0f172a')
+})
+
+it('applies themes when browser storage is denied', () => {
+  vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('Denied') })
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Quota exceeded') })
+  expect(() => initRouterTabsTheme()).not.toThrow()
+  expect(() => setRouterTabsTheme('dark')).not.toThrow()
   expect(document.documentElement.style.getPropertyValue('--router-tab-background')).toBe('#0f172a')
 })

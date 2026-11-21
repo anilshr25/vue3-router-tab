@@ -62,17 +62,21 @@ export function useTabDragSort(
   }
 
   function onDrop(index: number, event: DragEvent) {
-    if (!isSortable() || !dragState.dragging) return
+    if (!isSortable() || !dragState.dragging) {
+      onDragEnd()
+      return
+    }
 
     event.preventDefault()
 
-    if (dragState.dragIndex !== -1 && dragState.dragIndex !== index) {
-      const movedTab = tabs.splice(dragState.dragIndex, 1)[0]
+    const fromIndex = tabs.findIndex(tab => tab.id === dragState.dragTab?.id)
+    if (fromIndex >= 0 && Number.isInteger(index) && index >= 0 && index < tabs.length && fromIndex !== index) {
+      const movedTab = tabs.splice(fromIndex, 1)[0]
       tabs.splice(index, 0, movedTab)
 
       emit('tab-sorted', {
         tab: movedTab,
-        fromIndex: dragState.dragIndex,
+        fromIndex,
         toIndex: index
       })
     }

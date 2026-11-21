@@ -10,6 +10,7 @@ import type {
   TabInput,
   TabRecord
 } from './types'
+import { isNavigationFailure, NavigationFailureType } from 'vue-router'
 import type {
   Router,
   RouteLocationRaw,
@@ -114,17 +115,18 @@ function createTabFromRoute(
 
 function insertTab(tabs: TabRecord[], tab: TabRecord, position: 'last' | 'next', referenceId: string | null) {
   const exists = tabs.find(item => item.id === tab.id)
-  if (exists) return
+  if (exists) return exists
 
   if (position === 'next' && referenceId) {
     const referenceIndex = tabs.findIndex(item => item.id === referenceId)
     if (referenceIndex !== -1) {
       tabs.splice(referenceIndex + 1, 0, tab)
-      return
+      return tab
     }
   }
 
   tabs.push(tab)
+  return tab
 }
 
 /**
@@ -469,16 +471,19 @@ export function createRouterTabs(
   }
 
   async function reset(route: RouteLocationRaw = options.defaultRoute) {
-    clearRuntimeState()
+    // Validate and navigate before discarding the user's existing tabs and cache.
+    resolveRoute(router, route)
+    const presets = options.initialTabs.map(preset =>
+      createTabFromRoute(resolveRoute(router, preset.to), preset, options.keepAlive)
+    )
+    const failure = await router.replace(route)
+    if (failure && !isNavigationFailure(failure, NavigationFailureType.duplicated)) return
 
-    for (const preset of options.initialTabs) {
-      const resolved = resolveRoute(router, preset.to)
-      const tab = createTabFromRoute(resolved, preset, options.keepAlive)
-      tabs.push(tab)
-      syncAliveCache(tab)
+    clearRuntimeState()
+    for (const tab of presets) {
+      syncAliveCache(insertTab(tabs, tab, 'last', null))
     }
 
-    await router.replace(route)
     const tab = ensureTab(router.currentRoute.value)
     activeId.value = tab.id
     current.value = tab
@@ -510,15 +515,14 @@ export function createRouterTabs(
     isHydrating = true
     clearRuntimeState()
 
-    const records = snapshot?.tabs ?? []
+    const records = Array.isArray(snapshot?.tabs) ? snapshot.tabs : []
 
     for (const record of records) {
       try {
         const route = resolveRoute(router, record.to)
         const base = fromSnapshotTab(record)
         const tab = createTabFromRoute(route, base, options.keepAlive)
-        insertTab(tabs, tab, 'last', null)
-        syncAliveCache(tab)
+        syncAliveCache(insertTab(tabs, tab, 'last', null))
       } catch (error) {
         console.warn('[RouterTabs] Failed to restore tab', record, error)
       }
@@ -547,6 +551,12 @@ export function createRouterTabs(
         console.warn('[RouterTabs] Failed to navigate to restored route', target, error)
       }
     }
+
+    // Guards, invalid saved destinations, and duplicate navigations may not trigger the watcher.
+    const tab = ensureTab(router.currentRoute.value)
+    activeId.value = tab.id
+    current.value = tab
+    enforceMaxAlive(tabs, options.maxAlive, activeId.value, aliveCache)
   }
 
   watch(
@@ -565,8 +575,7 @@ export function createRouterTabs(
     options.initialTabs.forEach(preset => {
       const route = resolveRoute(router, preset.to)
       const tab = createTabFromRoute(route, preset, options.keepAlive)
-      insertTab(tabs, tab, 'last', null)
-      syncAliveCache(tab)
+      syncAliveCache(insertTab(tabs, tab, 'last', null))
     })
   }
 

@@ -57,3 +57,37 @@ describe('useTabDragSort', () => {
     expect(emit).not.toHaveBeenCalled()
   })
 })
+
+it('tracks the dragged tab by identity when earlier tabs close', () => {
+  const tabs = [createTab('a'), createTab('b'), createTab('c')]
+  const emit = vi.fn()
+  const sort = useTabDragSort(tabs, () => true, emit)
+  sort.onDragStart(tabs[1], 1, {} as DragEvent)
+  tabs.splice(0, 1)
+  sort.onDrop(1, { preventDefault: vi.fn() } as unknown as DragEvent)
+  expect(tabs.map(tab => tab.id)).toEqual(['c', 'b'])
+  expect(emit).toHaveBeenLastCalledWith('tab-sorted', { tab: tabs[1], fromIndex: 0, toIndex: 1 })
+})
+
+it('does not insert undefined when the dragged tab closes', () => {
+  const tabs = [createTab('a'), createTab('b')]
+  const emit = vi.fn()
+  const sort = useTabDragSort(tabs, () => true, emit)
+  sort.onDragStart(tabs[1], 1, {} as DragEvent)
+  tabs.pop()
+  sort.onDrop(0, { preventDefault: vi.fn() } as unknown as DragEvent)
+  expect(tabs.map(tab => tab.id)).toEqual(['a'])
+  expect(emit).toHaveBeenCalledTimes(1)
+  expect(sort.dragState.dragging).toBe(false)
+})
+
+it('clears dragging state if sorting is disabled before dropping', () => {
+  const tabs = [createTab('a'), createTab('b')]
+  let enabled = true
+  const sort = useTabDragSort(tabs, () => enabled, vi.fn())
+  sort.onDragStart(tabs[0], 0, {} as DragEvent)
+  enabled = false
+  sort.onDrop(1, { preventDefault: vi.fn() } as unknown as DragEvent)
+  expect(tabs.map(tab => tab.id)).toEqual(['a', 'b'])
+  expect(sort.dragState.dragging).toBe(false)
+})

@@ -41,7 +41,7 @@ export function useReactiveTabWatcher(controller: RouterTabsContext) {
     tabUpdateTrigger.value
     const titles: Record<string, string> = {}
     controller.tabs.forEach(tab => {
-      titles[tab.id] = typeof tab.title === 'string' ? tab.title : String(tab.title || getFallbackTitle(tab))
+      titles[tab.id] = getFallbackTitle(tab)
     })
     return titles
   })

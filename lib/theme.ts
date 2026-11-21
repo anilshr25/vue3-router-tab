@@ -78,9 +78,25 @@ const defaultDarkColor: ColorStyle = {
   iconColor: "#cbd5e1",
 }
 
+function readSetting(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function writeSetting(key: string, value: string) {
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    // Storage can be denied or full; the selected theme still applies for this session.
+  }
+}
+
 function readStoredPrimary(key: string): Partial<ColorStyle> | null {
   if (typeof window === 'undefined') return null
-  const raw = window.localStorage.getItem(key)
+  const raw = readSetting(key)
   if (!raw) return null
 
   try {
@@ -147,7 +163,7 @@ export function initRouterTabsTheme(options: RouterTabsThemeOptions = {}) {
   if (typeof window === 'undefined') return
 
   activeOptions = { ...options }
-  const stored = window.localStorage.getItem(options.styleKey ?? STYLE_KEY)
+  const stored = readSetting(options.styleKey ?? STYLE_KEY)
   const style = stored === 'light' || stored === 'dark' || stored === 'system'
     ? stored : options.defaultStyle ?? DEFAULT_STYLE
   applyStyle(style)
@@ -157,7 +173,7 @@ export function setRouterTabsTheme(style: 'light' | 'dark' | 'system', options?:
   if (typeof window === 'undefined') return
   activeOptions = { ...activeOptions, ...options }
   const key = activeOptions.styleKey ?? STYLE_KEY
-  window.localStorage.setItem(key, style)
+  writeSetting(key, style)
   applyStyle(style)
 }
 
@@ -165,6 +181,6 @@ export function setRouterTabsPrimary(color: ColorStyle, options?: RouterTabsThem
   if (typeof window === 'undefined') return
   activeOptions = { ...activeOptions, ...options }
   const key = activeOptions.primaryKey ?? PRIMARY_KEY
-  window.localStorage.setItem(key, JSON.stringify(color))
+  writeSetting(key, JSON.stringify(color))
   applyPrimary(color)
 }
