@@ -52,6 +52,7 @@
   display: flex;
   flex-direction: column;
   min-height: 300px;
+  min-width: 0;
   background-color: var(--router-tab-background);
   color: var(--router-tab-text);
 
@@ -77,6 +78,7 @@
   &__scroll {
     position: relative;
     flex: 1 1 0px;
+    min-width: 0;
     height: 100%;
     overflow-x: auto;
     overflow-y: hidden;
@@ -253,6 +255,7 @@
 
     // Show close button on hover/active
     &:hover,
+    &:focus-within,
     &.is-active {
 
       .router-tab__item-close {
@@ -308,7 +311,11 @@
 .router-tab__contextmenu {
   position: fixed;
   z-index: 1000;
-  min-width: $router-tab-contextmenu-min-width;
+  min-width: min(#{$router-tab-contextmenu-min-width}, calc(100vw - 16px));
+  max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  box-sizing: border-box;
   padding: $router-tab-contextmenu-padding;
   font-size: var(--router-tab-font-size);
   background: var(--router-tab-background);
@@ -597,5 +604,21 @@
   100% {
     opacity: 0;
     transform: scale(0.7) translateY(30px);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .router-tab__item .router-tab__item-close {
+    width: 24px;
+    height: 24px;
+    margin-left: $router-tab-close-icon-margin;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .router-tab *, .router-tab *::before, .router-tab *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

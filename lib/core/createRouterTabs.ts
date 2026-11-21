@@ -140,20 +140,13 @@ function enforceMaxAlive(
   if (!maxAlive || maxAlive <= 0) return
   
   const aliveTabs = tabs.filter(tab => tab.alive)
-  
-  while (aliveTabs.length > maxAlive) {
-    const candidate = aliveTabs.shift()
-    if (!candidate || candidate.id === activeId) continue
-    
-    const idx = tabs.findIndex(tab => tab.id === candidate.id)
-    if (idx > -1) {
-      const tab = tabs[idx]
-      const cacheKey = `${tab.id}::${tab.renderKey ?? 0}`
-      
-      // Remove from cache and mark as not alive
-      aliveCache.delete(cacheKey)
-      tab.alive = false
-    }
+  let excess = aliveTabs.length - Math.max(1, Math.floor(maxAlive))
+  for (const tab of aliveTabs) {
+    if (excess <= 0) break
+    if (tab.id === activeId) continue
+    aliveCache.delete(`${tab.id}::${tab.renderKey ?? 0}`)
+    tab.alive = false
+    excess--
   }
 }
 
@@ -297,8 +290,6 @@ export function createRouterTabs(
     syncAliveCache(tab)
     
     insertTab(tabs, tab, options.appendPosition, activeId.value)
-    enforceMaxAlive(tabs, options.maxAlive, activeId.value, aliveCache)
-    
     return tab
   }
 
@@ -311,7 +302,6 @@ export function createRouterTabs(
     if (refresh) await refreshTab(targetKey, true)
 
     await router[replace ? 'replace' : 'push'](target)
-    if (sameKey) await reload()
   }
 
   function fallbackAfterClose(closedId: string): RouteLocationRaw | null {
@@ -332,6 +322,7 @@ export function createRouterTabs(
     if (!id) return
     const tab = tabs.find(item => item.id === id)
     if (!tab) return
+    if (!closeOptions.force && tab.closable === false) return
     if (!closeOptions.force && options.keepLastTab && tabs.length === 1) {
       throw new Error('[RouterTabs] Unable to close the final tab when keepLastTab is true.')
     }
@@ -340,14 +331,12 @@ export function createRouterTabs(
     const isClosingActiveTab = activeId.value === id
     const shouldRedirect = isClosingActiveTab && closeOptions.redirect !== null
     const fallbackRoute = shouldRedirect ? (closeOptions.redirect ?? fallbackAfterClose(id)) : null
-    await removeTab(id, { force: closeOptions.force })
-
-    // Only skip redirect if explicitly set to null
-    if (closeOptions.redirect === null) return
-
+    // Keep the current tab intact if a navigation guard cancels the fallback.
     if (shouldRedirect && fallbackRoute) {
-      await router.replace(fallbackRoute)
+      const failure = await router.replace(fallbackRoute)
+      if (failure) return
     }
+    await removeTab(id, { force: closeOptions.force })
   }
 
   async function removeTab(
@@ -358,6 +347,7 @@ export function createRouterTabs(
     if (index === -1) return
 
     const tab = tabs[index]
+    if (!opts.force && (tab.closable === false || (options.keepLastTab && tabs.length === 1))) return
     // Remove KeepAlive cache entry if present
     const cacheKey = getTabCacheKey(tab)
     aliveCache.delete(cacheKey)
@@ -489,6 +479,10 @@ export function createRouterTabs(
     }
 
     await router.replace(route)
+    const tab = ensureTab(router.currentRoute.value)
+    activeId.value = tab.id
+    current.value = tab
+    enforceMaxAlive(tabs, options.maxAlive, activeId.value, aliveCache)
   }
 
   async function reload() {
@@ -575,6 +569,8 @@ export function createRouterTabs(
       syncAliveCache(tab)
     })
   }
+
+  enforceMaxAlive(tabs, options.maxAlive, activeId.value, aliveCache)
 
   return {
     options,

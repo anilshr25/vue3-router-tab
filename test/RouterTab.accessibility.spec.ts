@@ -52,6 +52,7 @@ async function mountRouterTab(initialPath = '/') {
   await router.isReady()
 
   const wrapper = mount(RouterTab, {
+    attachTo: document.body,
     props: {
       tabs: [{ to: '/users' }],
       keepLastTab: false,
@@ -218,4 +219,46 @@ describe('RouterTab accessibility', () => {
 
     expect((wrapper.vm as unknown as { $tabs: unknown }).$tabs).toBe(activeController)
   })
+})
+
+
+it('supports keyboard menu navigation and restores focus on Escape', async () => {
+  const { wrapper } = await mountRouterTab('/')
+  const tab = wrapper.findAll('[role="tab"]')[1]
+  await tab.trigger('keydown', { key: 'F10', shiftKey: true })
+  await flushPromises()
+  const menu = wrapper.get('[role="menu"]')
+  expect(menu.isVisible()).toBe(true)
+  expect(wrapper.findAll('[role="menuitem"]')[0].attributes('tabindex')).toBe('0')
+  expect(document.activeElement).toBe(wrapper.findAll('[role="menuitem"]')[0].element)
+  await menu.trigger('keydown', { key: 'ArrowDown' })
+  await flushPromises()
+  expect(menu.isVisible()).toBe(true)
+  expect(wrapper.findAll('[role="menuitem"]')[1].attributes('tabindex')).toBe('0')
+  await menu.trigger('keydown', { key: 'Escape' })
+  await flushPromises()
+  expect(wrapper.get('[role="menu"]').attributes('style')).toContain('display: none')
+  expect(document.activeElement).toBe(tab.element)
+  wrapper.unmount()
+})
+
+it('does not close a protected tab with the middle mouse button', async () => {
+  const { wrapper } = await mountRouterTab('/')
+  await wrapper.findAll('[role="tab"]')[0].trigger('auxclick', { button: 1 })
+  await flushPromises()
+  expect(wrapper.findAll('[role="tab"]')).toHaveLength(2)
+  wrapper.unmount()
+})
+
+
+it('remounts the page on refresh when KeepAlive is disabled', async () => {
+  const { wrapper } = await mountRouterTab('/users')
+  await wrapper.setProps({ keepAlive: false })
+  await flushPromises()
+  const previousPage = wrapper.get('.router-tab-page').element
+  const controller = (wrapper.vm as unknown as { controller: { reload: () => Promise<void> } }).controller
+  await controller.reload()
+  await flushPromises()
+  expect(wrapper.get('.router-tab-page').element).not.toBe(previousPage)
+  wrapper.unmount()
 })

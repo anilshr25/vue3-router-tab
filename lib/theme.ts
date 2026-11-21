@@ -3,6 +3,8 @@ const PRIMARY_KEY = 'tab-theme-primary-color'
 const DEFAULT_STYLE: 'light' | 'dark' | 'system' = 'system'
 const MEDIA_QUERY = '(prefers-color-scheme: dark)'
 
+let activeOptions: RouterTabsThemeOptions = {}
+
 let mediaListener: ((event: MediaQueryListEvent) => void) | null = null
 
 export interface RouterTabsThemeOptions {
@@ -115,8 +117,15 @@ function applyStyle(style: 'light' | 'dark' | 'system') {
   const root = document.documentElement
   const media = window.matchMedia(MEDIA_QUERY)
 
+  const updatePalette = () => {
+    const palette = root.dataset.theme === 'dark' ? { ...defaultDarkColor } : { ...defaultColors }
+    if (activeOptions.defaultPrimary) palette.primary = activeOptions.defaultPrimary
+    applyPrimary({ ...palette, ...readStoredPrimary(activeOptions.primaryKey ?? PRIMARY_KEY) })
+  }
+
   const updateFromSystem = () => {
     root.dataset.theme = media.matches ? 'dark' : 'light'
+    updatePalette()
   }
 
   if (mediaListener) {
@@ -130,57 +139,32 @@ function applyStyle(style: 'light' | 'dark' | 'system') {
     media.addEventListener('change', mediaListener)
   } else {
     root.dataset.theme = style
+    updatePalette()
   }
 }
 
 export function initRouterTabsTheme(options: RouterTabsThemeOptions = {}) {
   if (typeof window === 'undefined') return
 
-  const {
-    styleKey = STYLE_KEY,
-    primaryKey = PRIMARY_KEY,
-    defaultStyle = DEFAULT_STYLE,
-    defaultPrimary
-  } = options
-
-  const storedStyle = (window.localStorage.getItem(styleKey) as 'light' | 'dark' | 'system' | null) ?? defaultStyle
-
-  applyStyle(storedStyle)
-
-  const prefersDark =
-    storedStyle === 'dark' ||
-    (storedStyle === 'system' && window.matchMedia(MEDIA_QUERY).matches)
-
-  const basePalette = prefersDark
-    ? { ...defaultDarkColor }
-    : { ...defaultColors }
-
-  if (defaultPrimary) {
-    basePalette.primary = defaultPrimary
-  }
-
-  const storedPrimary = readStoredPrimary(primaryKey)
-
-  if (storedPrimary) {
-    applyPrimary({
-      ...basePalette,
-      ...storedPrimary
-    })
-  } else {
-    applyPrimary(basePalette)
-  }
+  activeOptions = { ...options }
+  const stored = window.localStorage.getItem(options.styleKey ?? STYLE_KEY)
+  const style = stored === 'light' || stored === 'dark' || stored === 'system'
+    ? stored : options.defaultStyle ?? DEFAULT_STYLE
+  applyStyle(style)
 }
 
 export function setRouterTabsTheme(style: 'light' | 'dark' | 'system', options?: RouterTabsThemeOptions) {
   if (typeof window === 'undefined') return
-  const key = options?.styleKey ?? STYLE_KEY
+  activeOptions = { ...activeOptions, ...options }
+  const key = activeOptions.styleKey ?? STYLE_KEY
   window.localStorage.setItem(key, style)
   applyStyle(style)
 }
 
 export function setRouterTabsPrimary(color: ColorStyle, options?: RouterTabsThemeOptions) {
   if (typeof window === 'undefined') return
-  const key = options?.primaryKey ?? PRIMARY_KEY
+  activeOptions = { ...activeOptions, ...options }
+  const key = activeOptions.primaryKey ?? PRIMARY_KEY
   window.localStorage.setItem(key, JSON.stringify(color))
   applyPrimary(color)
 }

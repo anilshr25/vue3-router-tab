@@ -124,3 +124,62 @@ describe('createRouterTabs', () => {
     expect(tabs.current.value?.id).toBe('/reports/1')
   })
 })
+
+
+describe('tab lifecycle regressions', () => {
+  it('respects protected tabs for close and remove unless forced', async () => {
+    const router = await createReadyRouter('/')
+    const tabs = createRouterTabs(router, { keepLastTab: false })
+    await tabs.openTab('/users')
+    await tabs.closeTab('/')
+    await tabs.removeTab('/')
+    expect(tabs.tabs.map(tab => tab.id)).toContain('/')
+    await tabs.removeTab('/', { force: true })
+    expect(tabs.tabs.map(tab => tab.id)).not.toContain('/')
+  })
+
+  it('keeps the active tab when a guard cancels closing navigation', async () => {
+    const router = await createReadyRouter('/')
+    const tabs = createRouterTabs(router)
+    await tabs.openTab('/users')
+    router.beforeEach(to => to.path === '/' ? false : true)
+    await tabs.closeTab('/users')
+    expect(tabs.activeId.value).toBe('/users')
+    expect(tabs.current.value?.id).toBe('/users')
+    expect(tabs.tabs).toHaveLength(2)
+  })
+
+  it('restores active state when resetting to the current route', async () => {
+    const router = await createReadyRouter('/users')
+    const tabs = createRouterTabs(router)
+    await tabs.reset('/users')
+    expect(tabs.activeId.value).toBe('/users')
+    expect(tabs.current.value?.id).toBe('/users')
+    expect(tabs.tabs).toHaveLength(1)
+  })
+
+  it('does not refresh the same tab when refresh is false and refreshes once otherwise', async () => {
+    const router = await createReadyRouter('/users')
+    const tabs = createRouterTabs(router)
+    await tabs.openTab('/users', false, false)
+    expect(tabs.current.value?.renderKey).toBe(0)
+    await tabs.openTab('/users')
+    expect(tabs.current.value?.renderKey).toBe(1)
+  })
+
+  it('keeps the newly active page cached when maxAlive is one', async () => {
+    const router = await createReadyRouter('/')
+    const tabs = createRouterTabs(router, { maxAlive: 1 })
+    await tabs.openTab('/users')
+    expect(tabs.getCacheKeys()).toEqual(['/users::0'])
+  })
+
+  it('applies cache limits to initial tabs', async () => {
+    const router = await createReadyRouter('/')
+    const tabs = createRouterTabs(router, {
+      maxAlive: 1,
+      initialTabs: [{ to: '/users' }, { to: '/settings' }]
+    })
+    expect(tabs.getCacheKeys()).toEqual(['/::0'])
+  })
+})

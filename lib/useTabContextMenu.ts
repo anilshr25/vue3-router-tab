@@ -2,7 +2,6 @@ import {
   computed,
   nextTick,
   onBeforeUnmount,
-  onMounted,
   reactive,
   ref,
   watch
@@ -132,11 +131,15 @@ export function useTabContextMenu(
     }
   }
 
-  function hideContextMenu() {
+  let trigger: HTMLElement | null = null
+
+  function hideContextMenu(restoreFocus = false) {
+    if (restoreFocus) trigger?.focus({ preventScroll: true })
     context.visible = false
     context.target = null
     highlightedIndex.value = -1
     menuItemRefs.value = []
+    document.removeEventListener('click', onOutsideClick)
   }
 
   function adjustMenuPosition() {
@@ -163,19 +166,23 @@ export function useTabContextMenu(
     }
   }
 
-  function showContextMenu(tab: TabRecord, event: MouseEvent) {
+  function onOutsideClick(event: MouseEvent) {
+    if (!menuRef.value?.contains(event.target as Node)) hideContextMenu()
+  }
+
+  function showContextMenu(tab: TabRecord, event: MouseEvent | KeyboardEvent) {
     if (!getContextMenu()) return
-
+    trigger = event.currentTarget as HTMLElement | null
+    const rect = trigger?.getBoundingClientRect()
     context.target = tab
-    context.position.x = event.clientX
-    context.position.y = event.clientY
-
+    context.position.x = 'clientX' in event ? event.clientX : (rect?.left ?? 8)
+    context.position.y = 'clientY' in event ? event.clientY : (rect?.bottom ?? 8)
+    context.visible = true
+    document.addEventListener('click', onOutsideClick)
     nextTick(() => {
-      context.visible = true
-      document.addEventListener('click', hideContextMenu, { once: true })
-      nextTick(() => {
-        adjustMenuPosition()
-      })
+      if (!context.visible) return
+      adjustMenuPosition()
+      highlightMenuIndex(findNextEnabledIndex(-1, 1))
     })
   }
 
@@ -286,6 +293,7 @@ export function useTabContextMenu(
     if (!handledKeys.includes(key)) return
 
     event.preventDefault()
+    event.stopPropagation()
 
     switch (key) {
       case 'ArrowDown':
@@ -315,7 +323,7 @@ export function useTabContextMenu(
         break
       }
       case 'Escape':
-        hideContextMenu()
+        hideContextMenu(true)
         break
     }
   }
@@ -326,12 +334,8 @@ export function useTabContextMenu(
     await item.action()
   }
 
-  onMounted(() => {
-    document.addEventListener('keydown', hideContextMenu)
-  })
-
   onBeforeUnmount(() => {
-    document.removeEventListener('keydown', hideContextMenu)
+    document.removeEventListener('click', onOutsideClick)
   })
 
   watch(
@@ -357,7 +361,6 @@ export function useTabContextMenu(
 
   watch(menuItems, items => {
     if (!context.visible) return
-    menuItemRefs.value = new Array(items.length).fill(null)
     const first = findNextEnabledIndex(-1, 1, items)
     highlightMenuIndex(first)
   }, { flush: 'post' })

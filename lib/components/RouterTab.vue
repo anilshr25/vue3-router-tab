@@ -13,6 +13,7 @@
           tag="ul"
           class="router-tab__nav"
           role="tablist"
+          aria-label="Open pages"
           v-bind="tabTransitionProps"
         >
           <li
@@ -28,7 +29,9 @@
             :ref="(el) => setTabRef(tab.id, el as HTMLElement)"
             @click="activate(tab)"
             @keydown="onTabKeydown(tab, index, $event)"
-            @auxclick.middle.prevent="close(tab)"
+            @keydown.shift.f10.prevent.stop="showContextMenu(tab, $event)"
+            @keydown.context-menu.prevent.stop="showContextMenu(tab, $event)"
+            @auxclick.middle.prevent="isClosable(tab) && close(tab)"
             @contextmenu.prevent="showContextMenu(tab, $event)"
             @dragstart="onDragStart(tab, index, $event)"
             @dragover="onDragOver(index, $event)"
@@ -37,7 +40,7 @@
             @drop="onDrop(index, $event)"
             @dragend="onDragEnd"
           >
-            <i v-if="tab.icon" :class="['router-tab__item-icon', tab.icon]" />
+            <i aria-hidden="true" v-if="tab.icon" :class="['router-tab__item-icon', tab.icon]" />
             <span class="router-tab__item-title" :title="getReactiveTabTitle(tab)">
               {{ getReactiveTabTitle(tab) }}
             </span>
@@ -90,7 +93,7 @@
               <component
                 v-if="Component"
                 :is="Component"
-                :key="controller.getRouteKey(route)"
+                :key="getComponentCacheKey(route)"
                 :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(route))"
                 class="router-tab-page"
               />
@@ -259,8 +262,7 @@ const RouterTab = defineComponent({
       // Just log the error, don't try to manipulate the cache
       // as it can cause infinite loops with KeepAlive
       
-      // Return false to propagate the error to parent
-      return false
+      // Allow Vue to propagate the error to the application error handler.
     })
 
     let persistenceHydrating = ref(false)
