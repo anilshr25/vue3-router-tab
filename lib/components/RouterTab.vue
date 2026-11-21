@@ -82,6 +82,7 @@
               <component
                 v-if="Component"
                 :is="getNamedComponent(Component, getComponentCacheKey(route))"
+                :route-component="Component"
                 :key="getComponentCacheKey(route)"
                 :ref="(el: any) => handleComponentRef(el, controller.getRouteKey(route))"
                 class="router-tab-page"

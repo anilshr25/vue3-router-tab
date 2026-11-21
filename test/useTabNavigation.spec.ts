@@ -34,7 +34,7 @@ describe('useTabNavigation', () => {
     await nextTick()
 
     expect(event.preventDefault).toHaveBeenCalled()
-    expect(controller.openTab).toHaveBeenCalledWith('/b', false)
+    expect(controller.openTab).toHaveBeenCalledWith('/b', false, false)
     expect(controller.activeId.value).toBe('b')
   })
 
@@ -54,4 +54,22 @@ describe('useTabNavigation', () => {
     expect(event.preventDefault).toHaveBeenCalled()
     expect(close).toHaveBeenCalledWith(tabs[0])
   })
+})
+
+it('does not refresh when keyboard navigation wraps to the only active tab', async () => {
+  const tabs = [createTab('a')]
+  const controller = { tabs, activeId: ref('a'), openTab: vi.fn() } as unknown as RouterTabsContext
+  const navigation = useTabNavigation(controller, vi.fn(), () => true)
+  await navigation.onTabKeydown(tabs[0], 0, { key: 'ArrowRight', preventDefault: vi.fn() } as unknown as KeyboardEvent)
+  expect(controller.openTab).not.toHaveBeenCalled()
+})
+
+it('does not focus a tab when its navigation is cancelled', async () => {
+  const tabs = [createTab('a'), createTab('b')]
+  const controller = { tabs, activeId: ref('a'), openTab: vi.fn(async () => {}) } as unknown as RouterTabsContext
+  const navigation = useTabNavigation(controller, vi.fn(), () => true)
+  const focus = vi.fn()
+  navigation.setTabRef('b', { focus } as unknown as HTMLElement)
+  await navigation.onTabKeydown(tabs[0], 0, { key: 'ArrowRight', preventDefault: vi.fn() } as unknown as KeyboardEvent)
+  expect(focus).not.toHaveBeenCalled()
 })

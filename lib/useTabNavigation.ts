@@ -47,8 +47,14 @@ export function useTabNavigation(
   async function activateTabByIndex(index: number) {
     const tab = controller.tabs[index]
     if (!tab) return
-    await controller.openTab(tab.to, false)
-    focusTabByIndex(index)
+    if (tab.href) {
+      activate(tab)
+      return
+    }
+    if (controller.activeId.value !== tab.id) {
+      await controller.openTab(tab.to, false, false)
+    }
+    if (controller.activeId.value === tab.id) focusTabByIndex(index)
   }
 
   function activate(tab: TabRecord) {
@@ -62,7 +68,7 @@ export function useTabNavigation(
     }
 
     if (controller.activeId.value === tab.id) return
-    controller.openTab(tab.to, false)
+    controller.openTab(tab.to, false, false)
     scrollTabIntoView(tab.id)
   }
 
@@ -102,6 +108,9 @@ export function useTabNavigation(
         if (isClosable(tab)) {
           event.preventDefault()
           await close(tab)
+          await nextTick()
+          const activeIndex = controller.tabs.findIndex(item => item.id === controller.activeId.value)
+          if (activeIndex >= 0) focusTabByIndex(activeIndex)
         }
         break
     }

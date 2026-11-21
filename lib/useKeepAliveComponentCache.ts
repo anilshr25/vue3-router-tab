@@ -1,14 +1,21 @@
 import { defineComponent, getCurrentInstance, h, ref } from 'vue'
+import type { Component, PropType, VNode } from 'vue'
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import type { RouterTabsContext } from './core/types'
 
 export function useKeepAliveComponentCache(controller: RouterTabsContext) {
   const componentCache = new Map<string, unknown>()
 
-  function createNamedComponent(component: any, name: string) {
+  function createNamedComponent(component: Component | VNode, name: string) {
     return defineComponent({
       name,
-      setup(_, { attrs, slots }) {
+      props: {
+        routeComponent: {
+          type: Object as PropType<Component | VNode>,
+          default: () => component
+        }
+      },
+      setup(props, { attrs, slots }) {
         const innerRef = ref<any>()
 
         const instance = getCurrentInstance()
@@ -30,7 +37,7 @@ export function useKeepAliveComponentCache(controller: RouterTabsContext) {
           })
         }
 
-        return () => h(component, { ...attrs, ref: innerRef }, slots)
+        return () => h(props.routeComponent, { ...attrs, ref: innerRef }, slots)
       }
     })
   }
@@ -45,7 +52,7 @@ export function useKeepAliveComponentCache(controller: RouterTabsContext) {
     })
   }
 
-  function getNamedComponent(component: any, cacheKey: string) {
+  function getNamedComponent(component: Component | VNode, cacheKey: string) {
     if (!component) return component
     const cached = componentCache.get(cacheKey)
     if (cached) return cached

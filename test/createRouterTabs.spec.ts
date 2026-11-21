@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defineComponent, nextTick } from 'vue'
+import { defineComponent, nextTick, watch } from 'vue'
 import {
   createMemoryHistory,
   createRouter,
@@ -227,4 +227,49 @@ it('preserves existing tabs when resetting to an invalid destination', async () 
   const before = tabs.snapshot()
   await expect(tabs.reset({ name: 'missing-route' })).rejects.toThrow()
   expect(tabs.snapshot()).toEqual(before)
+})
+
+it('does not restore a cache entry after the tab closes during refresh', async () => {
+  const router = await createReadyRouter('/users')
+  const tabs = createRouterTabs(router, { keepLastTab: false })
+  const refresh = tabs.refreshTab('/users', true)
+  await tabs.removeTab('/users')
+  await refresh
+  expect(tabs.tabs).toHaveLength(0)
+  expect(tabs.getCacheKeys()).toEqual([])
+})
+
+it('does not refresh cached data when navigation is cancelled', async () => {
+  const router = await createReadyRouter('/')
+  const tabs = createRouterTabs(router)
+  await tabs.openTab('/users')
+  await tabs.openTab('/settings')
+  const before = tabs.tabs.find(tab => tab.id === '/users')?.renderKey
+  router.beforeEach(to => to.path !== '/users')
+  await tabs.openTab('/users', false, true)
+  expect(tabs.tabs.find(tab => tab.id === '/users')?.renderKey).toBe(before)
+  expect(tabs.activeId.value).toBe('/settings')
+})
+
+it('keeps current tab properties reactive immediately after a new tab is created', async () => {
+  const router = await createReadyRouter('/users')
+  const tabs = createRouterTabs(router)
+  const titles: unknown[] = []
+  const stop = watch(() => tabs.current.value?.title, title => titles.push(title))
+  tabs.tabs[0].title = 'Updated users'
+  await nextTick()
+  expect(titles).toEqual(['Updated users'])
+  stop()
+})
+
+it('does not refresh tabs added while refreshAll is in progress', async () => {
+  const router = await createReadyRouter('/users')
+  const tabs = createRouterTabs(router)
+  const stop = watch(() => tabs.current.value?.renderKey, () => {
+    tabs.ensureTab(router.resolve('/settings'))
+  }, { flush: 'sync' })
+  await tabs.refreshAll(true)
+  expect(tabs.tabs.find(tab => tab.id === '/settings')?.renderKey).toBe(0)
+  expect(tabs.current.value?.renderKey).toBe(1)
+  stop()
 })

@@ -286,7 +286,7 @@ export function createRouterTabs(
     }
 
     // Create new tab
-    tab = createTabFromRoute(route, {}, options.keepAlive)
+    tab = reactive(createTabFromRoute(route, {}, options.keepAlive))
     
     // Add to cache if it should be alive
     syncAliveCache(tab)
@@ -301,9 +301,10 @@ export function createRouterTabs(
     const sameKey = activeId.value === targetKey
 
     if (refresh === 'sameTab') refresh = sameKey
-    if (refresh) await refreshTab(targetKey, true)
-
-    await router[replace ? 'replace' : 'push'](target)
+    const existing = tabs.find(tab => tab.id === targetKey)
+    const failure = await router[replace ? 'replace' : 'push'](target)
+    if (failure && !isNavigationFailure(failure, NavigationFailureType.duplicated)) return
+    if (refresh && existing && activeId.value === targetKey) await refreshTab(targetKey, true)
   }
 
   function fallbackAfterClose(closedId: string): RouteLocationRaw | null {
@@ -388,6 +389,8 @@ export function createRouterTabs(
       aliveCache.delete(oldCacheKey)
       tab.alive = false
       await nextTick()
+      // A close/reset can remove the record while cache eviction is being flushed.
+      if (!tabs.includes(tab)) return
     }
 
     // Step 2: Increment renderKey to generate new cache key (e.g., /quiz::0 → /quiz::1)
@@ -415,8 +418,8 @@ export function createRouterTabs(
   }
 
   async function refreshAll(force = false) {
-    for (const tab of tabs) {
-      await refreshTab(tab.id, force)
+    for (const id of tabs.map(tab => tab.id)) {
+      await refreshTab(id, force)
     }
   }
 

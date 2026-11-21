@@ -75,16 +75,14 @@ export function useTabContextMenu(
     const closable = tabsToClose.filter(item => item.closable !== false)
     if (!closable.length) return
 
-    for (const tab of closable) {
-      if (controller.activeId.value === tab.id) {
-        await controller.closeTab(tab.id, { redirect: reference.to, force: true })
-      } else {
-        await controller.removeTab(tab.id, { force: true })
-      }
-    }
-
+    // Confirm navigation before removing any tabs so guards cannot leave a partial close.
     if (controller.activeId.value !== reference.id) {
       await controller.openTab(reference.to, true, false)
+      if (controller.activeId.value !== reference.id) return
+    }
+
+    for (const tab of closable) {
+      await controller.removeTab(tab.id, { force: true })
     }
   }
 

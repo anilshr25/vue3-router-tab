@@ -338,3 +338,55 @@ it('renders tuple titles using their display text', async () => {
   tuple.unmount()
   router.currentRoute.value.meta.title = 'Home'
 })
+
+it('updates route props inside a cached page when its tab key is reused', async () => {
+  const PropPage = defineComponent({
+    props: { id: String },
+    template: '<main class="prop-page">{{ id }}</main>'
+  })
+  const router = createRouter({ history: createMemoryHistory(), routes: [
+    { path: '/items/:id', component: PropPage, props: true, meta: { key: 'items' } }
+  ] })
+  await router.push('/items/1')
+  await router.isReady()
+  const wrapper = mount(RouterTab, { props: { cookieKey: null }, global: { plugins: [router] } })
+  await flushPromises()
+  const page = wrapper.get('.prop-page').element
+  expect(page.textContent).toBe('1')
+  await router.push('/items/2')
+  await flushPromises()
+  expect(wrapper.get('.prop-page').text()).toBe('2')
+  expect(wrapper.get('.prop-page').element).toBe(page)
+  wrapper.unmount()
+})
+
+it('preserves the entire group when a bulk close destination is blocked', async () => {
+  const router = await createReadyRouter('/users')
+  const wrapper = mount(RouterTab, {
+    props: { cookieKey: null, tabs: [{ to: '/reactive?extra=1' }, { to: '/reactive' }] },
+    global: { plugins: [router] }
+  })
+  await flushPromises()
+  router.beforeEach(to => to.path !== '/reactive')
+  const before = wrapper.findAll('[role="tab"]').map(tab => tab.text())
+  await wrapper.findAll('[role="tab"]')[2].trigger('contextmenu', { clientX: 10, clientY: 10 })
+  await flushPromises()
+  const closeOthers = wrapper.findAll('[role="menuitem"]').find(item => item.text() === 'Close Others')
+  await closeOthers!.trigger('click')
+  await flushPromises()
+  expect(wrapper.findAll('[role="tab"]').map(tab => tab.text())).toEqual(before)
+  expect(router.currentRoute.value.fullPath).toBe('/users')
+  wrapper.unmount()
+})
+
+it('moves focus to the remaining active tab after keyboard closing', async () => {
+  const { wrapper } = await mountRouterTab('/users')
+  const tab = wrapper.get('[role="tab"]')
+  ;(tab.element as HTMLElement).focus()
+  await tab.trigger('keydown', { key: 'Delete' })
+  await flushPromises()
+  const active = wrapper.get('[role="tab"][aria-selected="true"]')
+  expect(active.text()).toBe('Home')
+  expect(document.activeElement).toBe(active.element)
+  wrapper.unmount()
+})
